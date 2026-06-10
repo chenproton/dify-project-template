@@ -54,7 +54,7 @@ if [ "$DEPLOY_TARGET" == "all" ] || [ "$DEPLOY_TARGET" == "job_ai" ]; then
 fi
 
 # 更新主入口
-cp backend/app.py "$BACKEND_DIR/../app.py"
+cp backend/app.py "$PROJECT_DIR/app.py"
 
 echo "后端文件更新完成"
 

@@ -24,8 +24,8 @@ app.before_request(auth_middleware)
 # 注册 Blueprint（每个智能体一个）
 app.register_blueprint(job_ai_bp)
 
-# 静态文件路径
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend')
+# 静态文件路径（frontend 在项目根目录，app.py 在 backend/ 子目录）
+FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
 
 @app.route("/")
 def index():

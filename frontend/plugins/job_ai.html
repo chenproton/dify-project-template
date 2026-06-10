@@ -247,7 +247,7 @@ async function submitAnalyze() {
     formData.append('responsibilities', state.responsibilities);
     if (file) formData.append('file', file);
     try {
-        const res = await fetch(API_BASE + '/api/analyze', { method: 'POST', body: formData });
+        const res = await fetch(API_BASE + '/api/job_ai/analyze', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         const outputs = data.data?.outputs || {};
@@ -298,7 +298,7 @@ async function submitGenerate() {
     formData.append('count', state.selected_jobs.length);
     if (state.uploadedFile) formData.append('file', state.uploadedFile);
     try {
-        const res = await fetch(API_BASE + '/api/generate', { method: 'POST', body: formData });
+        const res = await fetch(API_BASE + '/api/job_ai/generate', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
         const outputs = data.data?.outputs || {};
@@ -394,7 +394,7 @@ function renderJobTables() {
 async function submitConfirm() {
     goStep(4);
     try {
-        const res = await fetch(API_BASE + '/api/confirm', {
+        const res = await fetch(API_BASE + '/api/job_ai/confirm', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jobs: state.jobs })
         });
