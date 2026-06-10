@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 智能体服务平台</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 40px 20px; }
+.container { max-width: 1000px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 40px; }
+.header h1 { font-size: 32px; color: #1a1a1a; margin-bottom: 8px; }
+.header p { color: #666; font-size: 16px; }
+.agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.agent-card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; border: 1px solid #e0e0e0; text-decoration: none; color: inherit; display: block; }
+.agent-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); border-color: #1677ff; }
+.agent-icon { font-size: 40px; margin-bottom: 12px; }
+.agent-name { font-size: 18px; font-weight: 600; color: #1a1a1a; margin-bottom: 8px; }
+.agent-desc { font-size: 14px; color: #666; line-height: 1.5; }
+.agent-tag { display: inline-block; background: #f0f5ff; color: #1677ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-top: 12px; }
+.footer { text-align: center; margin-top: 40px; color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🤖 AI 智能体服务平台</h1>
+        <p>选择适合您的 AI 智能体，提升工作效率</p>
+    </div>
+    <div class="agent-grid">
+        <a href="/job_ai" class="agent-card">
+            <div class="agent-icon">💼</div>
+            <div class="agent-name">岗位 AI 辅助生成</div>
+            <div class="agent-desc">根据岗位描述或人培方案，智能拆解和生成岗位能力模型、胜任力配置等数据</div>
+            <span class="agent-tag">标准流程</span>
+        </a>
+        <!-- 后续新增智能体在这里添加卡片 -->
+    </div>
+    <div class="footer">
+        <p>来自：AI 服务平台</p>
+    </div>
+</div>
+</body>
+</html>

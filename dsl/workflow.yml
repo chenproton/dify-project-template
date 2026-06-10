@@ -1,0 +1,597 @@
+version: 0.6.0
+kind: app
+app:
+  name: 岗位AI辅助生成
+  mode: workflow
+  icon: 🤖
+  icon_type: emoji
+  icon_background: '#FFEAD5'
+  description: ''
+  use_icon_as_answer_icon: false
+workflow:
+  graph:
+    nodes:
+    - id: start_node
+      type: custom
+      data:
+        type: start
+        title: 用户输入
+        selected: false
+        variables:
+        - variable: stage
+          label: 阶段
+          type: text-input
+          required: true
+          options: []
+          placeholder: analyze / generate / confirm
+        - variable: job_name
+          label: 岗位名称
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: industry
+          label: 所属行业
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: description
+          label: 岗位简介
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: responsibilities
+          label: 工作职责
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: file
+          label: 上传文件
+          type: file
+          required: false
+          options: []
+          value_selector: []
+        - variable: file_text
+          label: 文件提取文本
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: count
+          label: 确认数量
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: suggest_job
+          label: 选中的岗位
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: choose_id
+          label: 选中岗位ID
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: jobs_json
+          label: 确认后的JSON
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+      position:
+        x: 79
+        y: 282
+      positionAbsolute:
+        x: 79
+        y: 282
+      width: 242
+      height: 291
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: ifelse_node
+      type: custom
+      data:
+        type: if-else
+        title: 条件分支
+        selected: false
+        cases:
+        - id: 'true'
+          case_id: 'true'
+          conditions:
+          - id: cond1
+            comparison_operator: is
+            value: analyze
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+        - id: branch_generate
+          case_id: branch_generate
+          conditions:
+          - id: cond2
+            comparison_operator: is
+            value: generate
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+        - id: branch_confirm
+          case_id: branch_confirm
+          conditions:
+          - id: cond3
+            comparison_operator: is
+            value: confirm
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+      position:
+        x: 381
+        y: 282
+      positionAbsolute:
+        x: 381
+        y: 282
+      width: 242
+      height: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: doc_extractor
+      type: custom
+      data:
+        type: document-extractor
+        title: 文档提取器
+        selected: false
+        is_array_file: false
+        variable_selector:
+        - start_node
+        - file
+      position:
+        x: 683
+        y: 151
+      positionAbsolute:
+        x: 683
+        y: 151
+      width: 242
+      height: 104
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_analyze
+      type: custom
+      data:
+        type: llm
+        title: LLM-分析建议
+        selected: false
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys1
+          role: system
+          text: 你是一位资深人力资源分析师。根据以下信息，建议应该拆分为多少个细分岗位。\n\n岗位名称：{{#start_node.job_name#}}\n所属行业：{{#start_node.industry#}}\n岗位简介：{{#start_node.description#}}\n工作职责：{{#start_node.responsibilities#}}\n文件内容：{{#doc_extractor.text#}}\n\n要求：\n1.
+            分析输入内容的广度和深度，建议合理的细分岗位数量（5-10个）\n2. 每个建议岗位给出简短命名和理由\n3. 必须按以下 JSON 格式输出，不要包含
+            markdown 代码块，不要包含其他说明文字。注意：suggested_count 必须是根据内容深度合理决定的 5-10 之间的数字，不要固定输出
+            3：\n\n{\"suggested_count\":N,\"reasoning\":\"分析理由...\",\"suggested_jobs\":[{\"name\":\"XX工程师\",\"reason\":\"理由...\"}]}
+        vision:
+          enabled: false
+      position:
+        x: 966
+        y: 151
+      positionAbsolute:
+        x: 966
+        y: 151
+      width: 242
+      height: 88
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_analyze
+      type: custom
+      data:
+        type: end
+        title: 输出-分析建议
+        selected: false
+        outputs:
+        - value_selector:
+          - llm_analyze
+          - text
+          value_type: string
+          variable: analyze_result
+        - value_selector:
+          - doc_extractor
+          - text
+          value_type: string
+          variable: file_text
+      position:
+        x: 1239
+        y: 151
+      positionAbsolute:
+        x: 1239
+        y: 151
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: doc_extractor_generate
+      type: custom
+      data:
+        type: document-extractor
+        title: 文档提取器-generate
+        selected: false
+        is_array_file: false
+        variable_selector:
+        - start_node
+        - file
+      position:
+        x: 550
+        y: 282
+      positionAbsolute:
+        x: 550
+        y: 282
+      width: 242
+      height: 104
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_generate
+      type: custom
+      data:
+        type: llm
+        title: LLM-生成岗位
+        selected: false
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys2
+          role: system
+          text: "你是一位专业的岗位建模专家。请根据以下需求，生成 {{#start_node.count#}} 个岗位的 JSON 数据。\n\n\
+            输入信息：\n- 岗位名称：{{#start_node.job_name#}}\n- 所属行业：{{#start_node.industry#}}\n\
+            - 岗位简介：{{#start_node.description#}}\n- 工作职责：{{#start_node.responsibilities#}}\n\
+            - 文件内容（缓存）：{{#start_node.file_text#}}\n- 新上传文件内容：{{#doc_extractor_generate.text#}}\n\
+            - 用户选中的岗位：{{#start_node.suggest_job#}}\n\
+            \n输出要求：\n1. 只输出纯 JSON 数组，不要任何 markdown\
+            \ 代码块（不要 ```json），不要任何解释文字\n2. 每个岗位对象必须包含以下字段：\n   {\n     \"name\": \"\
+            岗位名称\",\n     \"shortName\": \"简称\",\n     \"industry\": \"所属行业\",\n \
+            \    \"majors\": [\"专业1\", \"专业2\"],\n     \"salaryRange\": [5000, 15000],\n\
+            \     \"coverImage\": \"\",\n     \"description\": \"岗位描述\",\n     \"\
+            responsibilities\": [{\"name\": \"职责1\"}, {\"name\": \"职责2\"}],\n    \
+            \ \"requirements\": [{\"name\": \"要求1\"}],\n     \"careerPath\": {\"horizontal\"\
+            : [\"横向发展\"], \"vertical\": [\"纵向晋升\"]},\n     \"certificates\": [{\"\
+            name\": \"证书名\", \"description\": \"描述\"}],\n     \"abilityBindings\"\
+            : [{\"name\": \"能力点\", \"attributes\": [\"知识\"], \"domain\": \"能力域\"}],\n\
+            \     \"abilityDomains\": [{\"name\": \"能力域\"}],\n     \"competencyConfig\"\
+            : [{\"abilityName\": \"能力点\", \"level\": \"了解L1\", \"ruleDescription\"\
+            : \"标准描述\"}]\n   }\n3. 必须生成恰好 {{#start_node.count#}} 个岗位\n4. 能力域 3-5 个，每个能力域下\
+            \ 10-20 个能力点\n5. 薪资范围合理\n6. 输出必须是可以直接解析的 JSON 数组，前后不要加任何文字\n\n注意：请严格按照用户选中的岗位名称和方向来生成，不要偏离用户的选择。\n\n示例输出（仅格式参考，内容请根据输入生成）：\n\
+            [{\"name\":\"Java开发工程师\",\"shortName\":\"Java\",\"industry\":\"互联网\",\"\
+            majors\":[\"计算机科学\"],\"salaryRange\":[8000,20000],\"coverImage\":\"\"\
+            ,\"description\":\"负责后端系统开发\",\"responsibilities\":[{\"name\":\"系统开发\"\
+            }],\"requirements\":[{\"name\":\"熟悉Java\"}],\"careerPath\":{\"horizontal\"\
+            :[\"全栈\"],\"vertical\":[\"架构师\"]},\"certificates\":[{\"name\":\"软考中级\"\
+            ,\"description\":\"软件设计师\"}],\"abilityBindings\":[{\"name\":\"Java编程\"\
+            ,\"attributes\":[\"技能\"],\"domain\":\"开发能力\"}],\"abilityDomains\":[{\"\
+            name\":\"开发能力\"}],\"competencyConfig\":[{\"abilityName\":\"Java编程\",\"\
+            level\":\"掌握L3\",\"ruleDescription\":\"能独立完成复杂模块开发\"}]}]"
+        vision:
+          enabled: false
+      position:
+        x: 850
+        y: 282
+      positionAbsolute:
+        x: 683
+        y: 282
+      width: 242
+      height: 88
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_generate
+      type: custom
+      data:
+        type: code
+        title: 代码执行-JSON校验
+        selected: false
+        code_language: python3
+        code: "import json\nimport re\n\ndef main(raw_json: str) -> dict:\n    text\
+          \ = raw_json.strip()\n    # 1. 去掉 <think>...</think> 思考过程\n    text = re.sub(r\"\
+          <think>.*?</think>\", \"\", text, flags=re.DOTALL)\n    # 2. 清理 markdown\
+          \ 代码块标记\n    text = re.sub(r\"^```json\\s*\", \"\", text, flags=re.IGNORECASE)\n\
+          \    text = re.sub(r\"^```\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\"\
+          , \"\", text)\n    text = text.strip()\n    \n    jobs = None\n    # 3.\
+          \ 尝试直接解析\n    try:\n        jobs = json.loads(text)\n    except Exception:\n\
+          \        pass\n    \n    # 4. 尝试提取 JSON 数组\n    if jobs is None:\n     \
+          \   match = re.search(r\"\\[.*\\]\", text, re.DOTALL)\n        if match:\n\
+          \            try:\n                jobs = json.loads(match.group(0))\n \
+          \           except Exception:\n                pass\n    \n    # 5. 尝试提取\
+          \ JSON 对象\n    if jobs is None:\n        match = re.search(r\"\\{.*\\}\"\
+          , text, re.DOTALL)\n        if match:\n            try:\n              \
+          \  jobs = json.loads(match.group(0))\n            except Exception:\n  \
+          \              pass\n    \n    if jobs is None:\n        return {\n    \
+          \        \"success\": False,\n            \"jobs\": \"[]\",\n          \
+          \  \"preview\": json.dumps([{\"_error\": True, \"_message\": \"LLM输出无法解析为JSON\", \"_raw_preview\": raw_json[:500]}], ensure_ascii=False)\n        }\n    \n \
+          \   if not isinstance(jobs, list):\n        jobs = [jobs]\n    \n    for\
+          \ job in jobs:\n        job.setdefault(\"shortName\", job.get(\"name\",\
+          \ \"\")[:4])\n        job.setdefault(\"majors\", [])\n        job.setdefault(\"\
+          salaryRange\", [5000, 15000])\n        job.setdefault(\"coverImage\", \"\
+          \")\n        job.setdefault(\"careerPath\", {\"horizontal\": [], \"vertical\"\
+          : []})\n        job.setdefault(\"certificates\", [])\n        job.setdefault(\"\
+          abilityBindings\", [])\n        job.setdefault(\"abilityDomains\", [])\n\
+          \        job.setdefault(\"competencyConfig\", [])\n    \n    return {\n\
+          \        \"success\": True,\n        \"jobs\": json.dumps(jobs, ensure_ascii=False),\n\
+          \        \"preview\": json.dumps(jobs, ensure_ascii=False, indent=2)\n \
+          \   }\n"
+        variables:
+        - value_selector:
+          - llm_generate
+          - text
+          value_type: string
+          variable: raw_json
+        outputs:
+          success:
+            children: null
+            type: boolean
+          jobs:
+            children: null
+            type: string
+          preview:
+            children: null
+            type: string
+      position:
+        x: 1100
+        y: 282
+      positionAbsolute:
+        x: 1100
+        y: 282
+      width: 242
+      height: 52
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_generate
+      type: custom
+      data:
+        type: end
+        title: 输出-岗位预览
+        selected: false
+        outputs:
+        - value_selector:
+          - code_generate
+          - preview
+          value_type: string
+          variable: generate_result
+        - value_selector:
+          - code_generate
+          - success
+          value_type: boolean
+          variable: success
+      position:
+        x: 1400
+        y: 282
+      positionAbsolute:
+        x: 1400
+        y: 282
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_confirm
+      type: custom
+      data:
+        type: code
+        title: 代码执行-确认输出
+        selected: false
+        code_language: python3
+        code: "import json\n\ndef main(arg1: str) -> dict:\n    input_json = arg1.strip()\n\
+          \    # 先尝试直接解析\n    try:\n        jobs = json.loads(input_json)\n    except\
+          \ Exception as e1:\n        # 尝试去掉可能的 markdown 标记\n        cleaned = input_json\n\
+          \        if cleaned.startswith(\"```\"):\n            lines = cleaned.split(\"\
+          \\n\")\n            cleaned = \"\\n\".join(lines[1:-1] if lines[-1].strip()\
+          \ == \"```\" else lines[1:])\n        try:\n            jobs = json.loads(cleaned.strip())\n\
+          \        except Exception as e2:\n            return {\n               \
+          \ \"status\": \"error\",\n                \"data\": \"JSON解析失败: \" + str(e2)\
+          \ + \" | 原始输入前200字: \" + input_json[:200]\n            }\n    \n    cleaned\
+          \ = []\n    for job in jobs:\n        cleaned.append({\n            \"name\"\
+          : job.get(\"name\", \"\"),\n            \"shortName\": job.get(\"shortName\"\
+          , \"\"),\n            \"industry\": job.get(\"industry\", \"\"),\n     \
+          \       \"majors\": job.get(\"majors\", []),\n            \"salaryRange\"\
+          : job.get(\"salaryRange\", [0, 0]),\n            \"coverImage\": job.get(\"\
+          coverImage\", \"\"),\n            \"description\": job.get(\"description\"\
+          , \"\"),\n            \"responsibilities\": [{\"name\": r} if isinstance(r,\
+          \ str) else r for r in job.get(\"responsibilities\", [])],\n           \
+          \ \"requirements\": job.get(\"requirements\", []),\n            \"careerPath\"\
+          : job.get(\"careerPath\", {\"horizontal\": [], \"vertical\": []}),\n   \
+          \         \"certificates\": job.get(\"certificates\", []),\n           \
+          \ \"abilityBindings\": job.get(\"abilityBindings\", []),\n            \"\
+          abilityDomains\": job.get(\"abilityDomains\", []),\n            \"competencyConfig\"\
+          : job.get(\"competencyConfig\", [])\n        })\n    return {\n        \"\
+          status\": \"confirmed\",\n        \"data\": json.dumps(cleaned, ensure_ascii=False)\n\
+          \    }\n"
+        variables:
+        - value_selector:
+          - start_node
+          - jobs_json
+          value_type: string
+          variable: arg1
+        outputs:
+          status:
+            children: null
+            type: string
+          data:
+            children: null
+            type: string
+      position:
+        x: 683
+        y: 382
+      positionAbsolute:
+        x: 683
+        y: 382
+      width: 242
+      height: 52
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_confirm
+      type: custom
+      data:
+        type: end
+        title: 输出-标准JSON
+        selected: false
+        outputs:
+        - value_selector:
+          - code_confirm
+          - data
+          value_type: string
+          variable: confirm_result
+        - value_selector:
+          - code_confirm
+          - status
+          value_type: string
+          variable: status
+      position:
+        x: 966
+        y: 382
+      positionAbsolute:
+        x: 966
+        y: 382
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
+    - id: e1
+      source: start_node
+      sourceHandle: source
+      target: ifelse_node
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: if-else
+    - id: e2
+      source: ifelse_node
+      sourceHandle: 'true'
+      target: doc_extractor
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+    - id: e3
+      source: doc_extractor
+      sourceHandle: source
+      target: llm_analyze
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+    - id: e4
+      source: llm_analyze
+      sourceHandle: source
+      target: end_analyze
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: end
+    - id: e5
+      source: ifelse_node
+      sourceHandle: branch_generate
+      target: doc_extractor_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+    - id: e5_1
+      source: doc_extractor_generate
+      sourceHandle: source
+      target: llm_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+    - id: e6
+      source: llm_generate
+      sourceHandle: source
+      target: code_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+    - id: e7
+      source: code_generate
+      sourceHandle: source
+      target: end_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+    - id: e8
+      source: ifelse_node
+      sourceHandle: branch_confirm
+      target: code_confirm
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+    - id: e9
+      source: code_confirm
+      sourceHandle: source
+      target: end_confirm
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end

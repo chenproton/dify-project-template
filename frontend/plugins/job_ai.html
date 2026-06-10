@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>岗位 AI 辅助生成</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+.container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+h1 { font-size: 24px; margin-bottom: 24px; color: #1a1a1a; display: flex; align-items: center; gap: 12px; }
+.tag-purple { display: inline-block; background: #722ed1; color: white; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+.steps { display: flex; margin-bottom: 32px; }
+.step { flex: 1; text-align: center; padding: 12px; border-bottom: 3px solid #e0e0e0; color: #999; font-size: 14px; }
+.step.active { border-bottom-color: #1677ff; color: #1677ff; font-weight: 600; }
+.step.done { border-bottom-color: #52c41a; color: #52c41a; }
+.form-group { margin-bottom: 20px; }
+label { display: block; margin-bottom: 6px; font-size: 14px; color: #333; font-weight: 500; }
+input[type="text"], textarea { width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+input[type="text"]:focus, textarea:focus { outline: none; border-color: #1677ff; }
+textarea { min-height: 100px; resize: vertical; }
+.hint { font-size: 12px; color: #999; margin-top: 4px; }
+.required { color: #ff4d4f; margin-left: 2px; }
+.btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: white; }
+.btn-primary:hover { background: #0958d9; }
+.btn-primary:disabled { background: #bae0ff; cursor: not-allowed; }
+.btn-default { background: white; border: 1px solid #d9d9d9; color: #333; }
+.btn-default:hover { border-color: #1677ff; color: #1677ff; }
+.actions { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+.actions-right { display: flex; gap: 8px; }
+.loading { text-align: center; padding: 40px; color: #666; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid #f3f3f3; border-top: 2px solid #1677ff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.suggest-box { background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.suggest-box h3 { color: #389e0d; font-size: 16px; margin-bottom: 8px; }
+.suggest-box p { color: #666; font-size: 14px; line-height: 1.6; }
+
+/* Tab 切换 */
+.tabs { display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 24px; }
+.tab { padding: 10px 20px; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab:hover { color: #1677ff; }
+.tab.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 500; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* 虚线上传框 */
+.upload-zone { border: 2px dashed #d9d9d9; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+.upload-zone:hover { border-color: #1677ff; background: #f0f5ff; }
+.upload-zone .upload-icon { font-size: 48px; color: #bfbfbf; margin-bottom: 12px; }
+.upload-zone .upload-text { font-size: 16px; color: #333; margin-bottom: 8px; }
+.upload-zone .upload-hint { font-size: 13px; color: #999; }
+.upload-zone.has-file { border-color: #52c41a; background: #f6ffed; }
+.upload-zone.has-file .upload-icon { color: #52c41a; }
+
+/* 岗位选择卡片 */
+.job-select-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 10px 0; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: all 0.2s; }
+.job-select-card:hover { border-color: #1677ff; background: #f0f5ff; }
+.job-select-card.selected { border-color: #1677ff; background: #f0f5ff; }
+.job-select-card input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+.job-select-card .content { flex: 1; }
+.job-select-card .name { font-weight: 600; color: #1a1a1a; font-size: 15px; margin-bottom: 4px; }
+.job-select-card .reason { font-size: 13px; color: #666; line-height: 1.5; }
+
+/* 可折叠结果卡片 */
+.collapsible { border: 1px solid #adc6ff; border-radius: 8px; overflow: hidden; }
+.collapsible-header { background: #f0f5ff; padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
+.collapsible-header:hover { background: #e6f0ff; }
+.collapsible-header h3 { margin: 0; font-size: 16px; color: #1677ff; }
+.collapsible-toggle { font-size: 18px; color: #1677ff; transition: transform 0.2s; }
+.collapsible.collapsed .collapsible-toggle { transform: rotate(-90deg); }
+.collapsible-body { padding: 16px; transition: max-height 0.3s ease, padding 0.3s ease; overflow: auto; }
+.collapsible.collapsed .collapsible-body { max-height: 0; padding: 0 16px; overflow: hidden; }
+
+/* 岗位表格 */
+.job-table-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+.job-table-card .header { background: #1677ff; color: white; padding: 12px 16px; font-weight: 600; font-size: 15px; }
+.job-table-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.job-table-card th, .job-table-card td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+.job-table-card th { background: #fafafa; color: #666; font-weight: 500; width: 140px; }
+.job-table-card td { color: #333; }
+.job-table-card .tag { display: inline-block; background: #f0f5ff; color: #1677ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+.job-table-card .salary { color: #fa8c16; font-weight: 600; }
+.job-table-card .sub-section { font-weight: 600; color: #1677ff; margin: 8px 0 4px; font-size: 13px; }
+.job-table-card .sub-item { margin: 4px 0; padding-left: 12px; border-left: 2px solid #e0e0e0; }
+.job-table-card .sub-item-title { font-weight: 500; color: #333; }
+.job-table-card .sub-item-desc { color: #666; font-size: 12px; margin-top: 2px; }
+
+.result-box { background: #f0f5ff; border: 1px solid #adc6ff; border-radius: 8px; padding: 16px; }
+.result-box pre { background: white; padding: 16px; border-radius: 4px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🤖 岗位 AI 辅助生成 <span class="tag-purple">来自：AI 服务平台</span></h1>
+<div class="steps">
+    <div class="step active" id="step-indicator-1">1. 输入需求</div>
+    <div class="step" id="step-indicator-2">2. 选择岗位</div>
+    <div class="step" id="step-indicator-3">3. 预览岗位</div>
+    <div class="step" id="step-indicator-4">4. 导出数据</div>
+</div>
+
+<!-- 第一步：输入需求 -->
+<div id="step-1">
+    <div class="tabs">
+        <div class="tab active" data-tab="manual" onclick="switchTab('manual')">✏️ 输入必要的岗位关键信息后拆解</div>
+        <div class="tab" data-tab="upload" onclick="switchTab('upload')">📄 从人培方案中提取岗位并拆解</div>
+    </div>
+
+    <!-- 手动编辑 -->
+    <div id="tab-manual" class="tab-content active">
+        <div class="form-group"><label>岗位名称 <span class="required">*</span></label><input type="text" id="job_name" placeholder="例如：Java工程师"></div>
+        <div class="form-group"><label>所属行业 <span class="required">*</span></label><input type="text" id="industry" placeholder="例如：互联网"></div>
+        <div class="form-group"><label>岗位背景介绍 <span class="required">*</span></label><textarea id="description" placeholder="请输入岗位的背景介绍"></textarea></div>
+        <div class="form-group"><label>工作职责</label><textarea id="responsibilities" placeholder="输入真实岗位职责，岗位拆解结果更加准确"></textarea></div>
+    </div>
+
+    <!-- 上传人培方案 -->
+    <div id="tab-upload" class="tab-content">
+        <div class="form-group">
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text" id="upload-text">点击上传人培方案</div>
+                <div class="upload-hint">支持 PDF、Word 文件，AI 会自动提取内容辅助分析</div>
+            </div>
+            <input type="file" id="file" accept=".pdf,.docx" style="display:none" onchange="onFileSelected(this)">
+        </div>
+    </div>
+
+    <div class="actions">
+        <span></span>
+        <button class="btn btn-primary" onclick="submitAnalyze()">下一步 →</button>
+    </div>
+</div>
+
+<!-- 第二步：选择岗位 -->
+<div id="step-2" class="hidden">
+    <div id="analyze-loading" class="loading"><span class="spinner"></span> AI 正在分析岗位需求，请稍候...</div>
+    <div id="analyze-result" class="hidden">
+        <div class="suggest-box"><h3>📊 AI 分析结论</h3><p id="analyze-reasoning"></p></div>
+        <h3 style="margin-bottom: 12px;">请选择需要生成的岗位（可多选）</h3>
+        <div id="suggested-jobs"></div>
+        <div class="actions">
+            <span></span>
+            <button class="btn btn-primary" onclick="submitGenerate()">下一步 →</button>
+        </div>
+    </div>
+</div>
+
+<!-- 第三步：预览岗位 -->
+<div id="step-3" class="hidden">
+    <div id="generate-loading" class="loading"><span class="spinner"></span> AI 正在生成岗位数据，请稍候...</div>
+    <div id="generate-result" class="hidden">
+        <h3 style="margin-bottom: 16px;">📋 生成的岗位预览</h3>
+        <div id="jobs-preview"></div>
+        <div class="actions">
+            <span></span>
+            <button class="btn btn-primary" onclick="submitConfirm()">下一步 →</button>
+        </div>
+    </div>
+</div>
+
+<!-- 第四步：导出数据 -->
+<div id="step-4" class="hidden">
+    <div id="confirm-loading" class="loading"><span class="spinner"></span> 正在格式化输出...</div>
+    <div id="confirm-result" class="hidden">
+        <div class="result-box collapsible collapsed" id="result-collapsible">
+            <div class="collapsible-header" onclick="toggleResult()">
+                <h3>✅ 最终输出结果</h3>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-body"><pre id="final-json"></pre></div>
+        </div>
+        <div class="actions" style="margin-top: 16px;">
+            <span></span>
+            <div class="actions-right">
+                <button class="btn btn-default" onclick="downloadResult()">💾 下载文件</button>
+                <button class="btn btn-primary" onclick="location.reload()">🔄 再生成一个</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+const API_BASE = 'http://111.170.170.202:5000';
+let state = { job_name: '', industry: '', description: '', responsibilities: '', uploadedFile: null, file_text: '', suggested_jobs: [], selected_jobs: [], jobs: [] };
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function onFileSelected(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById('upload-zone').classList.add('has-file');
+        document.getElementById('upload-text').textContent = '已选择：' + file.name;
+        state.uploadedFile = file;
+    }
+}
+
+function goStep(n) {
+    [1,2,3,4].forEach(i => {
+        document.getElementById('step-' + i).classList.add('hidden');
+        document.getElementById('step-indicator-' + i).classList.remove('active');
+        if (i < n) document.getElementById('step-indicator-' + i).classList.add('done');
+        else document.getElementById('step-indicator-' + i).classList.remove('done');
+    });
+    document.getElementById('step-' + n).classList.remove('hidden');
+    document.getElementById('step-indicator-' + n).classList.add('active');
+}
+
+function getActiveTab() {
+    return document.querySelector('.tab.active').dataset.tab;
+}
+
+async function submitAnalyze() {
+    const tab = getActiveTab();
+    const job_name = document.getElementById('job_name').value.trim();
+    const industry = document.getElementById('industry').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const responsibilities = document.getElementById('responsibilities').value.trim();
+    const fileInput = document.getElementById('file');
+    const file = fileInput.files[0];
+
+    if (tab === 'manual') {
+        if (!job_name) { alert('请填写岗位名称'); return; }
+        if (!industry) { alert('请填写所属行业'); return; }
+        if (!description) { alert('请填写岗位背景介绍'); return; }
+    } else {
+        if (!file) { alert('请上传人培方案'); return; }
+    }
+
+    state.job_name = job_name; state.industry = industry;
+    state.description = description;
+    state.responsibilities = responsibilities;
+    state.uploadedFile = file;
+    goStep(2);
+    const formData = new FormData();
+    formData.append('job_name', state.job_name);
+    formData.append('industry', state.industry);
+    formData.append('description', state.description);
+    formData.append('responsibilities', state.responsibilities);
+    if (file) formData.append('file', file);
+    try {
+        const res = await fetch(API_BASE + '/api/analyze', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data?.outputs || {};
+        state.file_text = outputs.file_text || '';
+        const analyzeData = JSON.parse(outputs.analyze_result || '{}');
+        state.suggested_jobs = analyzeData.suggested_jobs || [];
+        document.getElementById('analyze-reasoning').textContent = analyzeData.reasoning || '';
+        const container = document.getElementById('suggested-jobs');
+        container.innerHTML = '';
+        state.suggested_jobs.forEach((job, idx) => {
+            const card = document.createElement('div');
+            card.className = 'job-select-card';
+            card.dataset.idx = idx;
+            card.onclick = function(e) { if(e.target.type !== 'checkbox') toggleSelect(this, idx); };
+            card.innerHTML = '<input type="checkbox" onchange="toggleSelect(this.parentElement, ' + idx + ')" onclick="event.stopPropagation()">' +
+                '<div class="content"><div class="name">' + (job.name || '') + '</div><div class="reason">' + (job.reason || '') + '</div></div>';
+            container.appendChild(card);
+        });
+        document.getElementById('analyze-loading').classList.add('hidden');
+        document.getElementById('analyze-result').classList.remove('hidden');
+    } catch (err) { alert('分析失败：' + err.message); console.error(err); goStep(1); }
+}
+
+function toggleSelect(card, idx) {
+    const cb = card.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    if (cb.checked) card.classList.add('selected');
+    else card.classList.remove('selected');
+}
+
+async function submitGenerate() {
+    const cards = document.querySelectorAll('.job-select-card.selected');
+    if (cards.length === 0) { alert('请至少选择一个岗位'); return; }
+    const selectedIndices = [];
+    cards.forEach(c => selectedIndices.push(parseInt(c.dataset.idx)));
+    state.selected_jobs = selectedIndices.map(i => state.suggested_jobs[i]);
+    const choose_id = state.selected_jobs.map(j => j.id || j.name).join(',');
+    const suggest_job = JSON.stringify(state.selected_jobs);
+    goStep(3);
+    const formData = new FormData();
+    formData.append('suggest_job', suggest_job);
+    formData.append('choose_id', choose_id);
+    formData.append('job_name', state.job_name);
+    formData.append('industry', state.industry);
+    formData.append('description', state.description);
+    formData.append('responsibilities', state.responsibilities);
+    formData.append('file_text', state.file_text || '');
+    formData.append('count', state.selected_jobs.length);
+    if (state.uploadedFile) formData.append('file', state.uploadedFile);
+    try {
+        const res = await fetch(API_BASE + '/api/generate', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data?.outputs || {};
+        let generateResult = outputs.generate_result || '[]';
+        console.log('generate_result raw:', generateResult.substring(0, 200));
+        let jobs;
+        try {
+            jobs = JSON.parse(generateResult);
+        } catch (parseErr) {
+            console.error('JSON 解析失败，尝试提取数组:', generateResult.substring(0, 500));
+            // 尝试提取 JSON 数组
+            const match = generateResult.match(/\[.*\]/s);
+            if (match) {
+                try {
+                    jobs = JSON.parse(match[0]);
+                } catch (e2) {
+                    throw new Error('无法解析返回的岗位数据，原始内容：' + generateResult.substring(0, 300));
+                }
+            } else {
+                throw new Error('返回的岗位数据格式不正确：' + generateResult.substring(0, 300));
+            }
+        }
+        state.jobs = jobs || [];
+        renderJobTables();
+        document.getElementById('generate-loading').classList.add('hidden');
+        document.getElementById('generate-result').classList.remove('hidden');
+    } catch (err) {
+        console.error('生成失败详情:', err);
+        alert('生成失败：' + err.message);
+        goStep(2);
+    }
+}
+
+function renderJobTables() {
+    const container = document.getElementById('jobs-preview');
+    container.innerHTML = '';
+    state.jobs.forEach((job, idx) => {
+        const card = document.createElement('div');
+        card.className = 'job-table-card';
+        const respList = (job.responsibilities || []).map(r => typeof r === 'string' ? r : (r.name || '')).filter(Boolean).join('、') || '-';
+        const reqList = (job.requirements || []).map(r => typeof r === 'string' ? r : (r.name || '')).filter(Boolean).join('、') || '-';
+        const majorList = (job.majors || []).join('、') || '-';
+        const certList = (job.certificates || []).map(c => c.name || '').filter(Boolean).join('、') || '-';
+        const salary = (job.salaryRange || []).join(' - ');
+        const cp = job.careerPath || {};
+        const horiz = (cp.horizontal || []).join('、') || '-';
+        const vert = (cp.vertical || []).join('、') || '-';
+
+        let abilityHtml = '';
+        if (job.abilityDomains && job.abilityDomains.length > 0) {
+            abilityHtml += '<div class="sub-section">🎯 能力域</div>';
+            job.abilityDomains.forEach(ad => {
+                abilityHtml += '<div class="sub-item">' +
+                    '<div class="sub-item-title">' + (ad.name || '') + '</div>' +
+                    '</div>';
+            });
+        }
+        if (job.abilityBindings && job.abilityBindings.length > 0) {
+            abilityHtml += '<div class="sub-section">📌 能力点</div>';
+            job.abilityBindings.forEach(ab => {
+                abilityHtml += '<div class="sub-item">' +
+                    '<div class="sub-item-title">' + (ab.name || '') + '</div>' +
+                    '<div class="sub-item-desc">属性：' + (ab.attributes || []).join('/') + ' | 能力域：' + (ab.domain || '-') + '</div>' +
+                    '</div>';
+            });
+        }
+        if (job.competencyConfig && job.competencyConfig.length > 0) {
+            abilityHtml += '<div class="sub-section">📊 岗位能力胜任要求</div>';
+            job.competencyConfig.forEach(cfg => {
+                abilityHtml += '<div class="sub-item">' +
+                    '<div class="sub-item-title">' + (cfg.abilityName || '') + '（' + (cfg.level || '-') + '）</div>' +
+                    '<div class="sub-item-desc">' + (cfg.ruleDescription || '') + '</div>' +
+                    '</div>';
+            });
+        }
+
+        card.innerHTML = '<div class="header">岗位 ' + (idx + 1) + '：' + (job.name || '') + '（' + (job.shortName || '') + '）</div>' +
+            '<table>' +
+            '<tr><th>所属行业</th><td>' + (job.industry || '-') + '</td></tr>' +
+            '<tr><th>薪资范围</th><td class="salary">' + (salary ? '¥' + salary : '-') + '</td></tr>' +
+            '<tr><th>专业要求</th><td>' + majorList + '</td></tr>' +
+            '<tr><th>岗位描述</th><td>' + (job.description || '-') + '</td></tr>' +
+            '<tr><th>工作职责</th><td>' + respList + '</td></tr>' +
+            '<tr><th>任职要求</th><td>' + reqList + '</td></tr>' +
+            '<tr><th>相关证书</th><td>' + certList + '</td></tr>' +
+            '<tr><th>职业发展</th><td><div class="sub-item-title">横向发展</div><div class="sub-item-desc">' + horiz + '</div><div class="sub-item-title" style="margin-top:8px;">纵向晋升</div><div class="sub-item-desc">' + vert + '</div></td></tr>' +
+            (abilityHtml ? '<tr><th>能力模型</th><td>' + abilityHtml + '</td></tr>' : '') +
+            '</table>';
+        container.appendChild(card);
+    });
+}
+
+async function submitConfirm() {
+    goStep(4);
+    try {
+        const res = await fetch(API_BASE + '/api/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobs: state.jobs })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data?.outputs || {};
+        const resultData = JSON.parse(outputs.confirm_result || '[]');
+        document.getElementById('final-json').textContent = JSON.stringify(resultData, null, 2);
+        document.getElementById('confirm-loading').classList.add('hidden');
+        document.getElementById('confirm-result').classList.remove('hidden');
+    } catch (err) { alert('确认失败：' + err.message); console.error(err); goStep(3); }
+}
+
+function toggleResult() {
+    const el = document.getElementById('result-collapsible');
+    el.classList.toggle('collapsed');
+}
+
+function downloadResult() {
+    const text = document.getElementById('final-json').textContent;
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = '岗位数据_' + state.job_name + '_' + new Date().toISOString().slice(0,10) + '.json'; a.click(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!--
+智能体前端模板
+==============
+复制此文件并重命名，快速创建新的智能体前端页面。
+
+步骤：
+1. 复制：cp plugins/TEMPLATE.html plugins/xxx_ai.html
+2. 修改：将模板中的 "xxx" 替换为你的智能体名称
+3. 调整：根据业务需求修改表单字段和展示逻辑
+4. 入口：在 index.html 中添加卡片
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XXX AI 智能体</title>
+<style>
+/* 基础样式（可根据需要调整） */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+.container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+h1 { font-size: 24px; margin-bottom: 24px; color: #1a1a1a; display: flex; align-items: center; gap: 12px; }
+.tag-purple { display: inline-block; background: #722ed1; color: white; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+.btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: white; }
+.btn-primary:hover { background: #0958d9; }
+.loading { text-align: center; padding: 40px; color: #666; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>🤖 XXX AI 智能体 <span class="tag-purple">来自：AI 服务平台</span></h1>
+    
+    <!-- 第一步：输入需求 -->
+    <div id="step-1">
+        <div class="form-group">
+            <label>字段 1</label>
+            <input type="text" id="field1" placeholder="请输入...">
+        </div>
+        <div class="actions">
+            <button class="btn btn-primary" onclick="submitAnalyze()">下一步 →</button>
+        </div>
+    </div>
+    
+    <!-- 加载状态 -->
+    <div id="loading" class="loading hidden">AI 正在处理，请稍候...</div>
+    
+    <!-- 结果展示 -->
+    <div id="result" class="hidden">
+        <pre id="result-json"></pre>
+    </div>
+</div>
+
+<script>
+const API_BASE = 'http://111.170.170.202:5000';
+
+async function submitAnalyze() {
+    const field1 = document.getElementById('field1').value.trim();
+    
+    if (!field1) { alert('请填写字段 1'); return; }
+    
+    document.getElementById('step-1').classList.add('hidden');
+    document.getElementById('loading').classList.remove('hidden');
+    
+    const formData = new FormData();
+    formData.append('field1', field1);
+    
+    try {
+        const res = await fetch(API_BASE + '/api/xxx_ai/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        
+        if (data.error) throw new Error(data.error);
+        
+        const outputs = data.data?.outputs || {};
+        document.getElementById('result-json').textContent = JSON.stringify(outputs, null, 2);
+        
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('result').classList.remove('hidden');
+    } catch (err) {
+        alert('处理失败：' + err.message);
+        console.error(err);
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('step-1').classList.remove('hidden');
+    }
+}
+</script>
+</body>
+</html>
