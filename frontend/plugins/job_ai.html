@@ -175,7 +175,9 @@ textarea { min-height: 100px; resize: vertical; }
         <div class="actions" style="margin-top: 16px;">
             <span></span>
             <div class="actions-right">
-                <button class="btn btn-default" onclick="downloadResult()">💾 下载文件</button>
+                <button class="btn btn-default" onclick="downloadResult()">💾 下载 JSON</button>
+                <button class="btn btn-default" onclick="exportExcel()">📊 导出 Excel</button>
+                <button class="btn btn-default" onclick="exportCSV()">📄 导出 CSV</button>
                 <button class="btn btn-primary" onclick="location.reload()">🔄 再生成一个</button>
             </div>
         </div>
@@ -250,7 +252,7 @@ async function submitAnalyze() {
         const res = await fetch(API_BASE + '/api/job_ai/analyze', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        const outputs = data.data?.outputs || {};
+        const outputs = data.data || {};
         state.file_text = outputs.file_text || '';
         const analyzeData = JSON.parse(outputs.analyze_result || '{}');
         state.suggested_jobs = analyzeData.suggested_jobs || [];
@@ -301,7 +303,7 @@ async function submitGenerate() {
         const res = await fetch(API_BASE + '/api/job_ai/generate', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        const outputs = data.data?.outputs || {};
+        const outputs = data.data || {};
         let generateResult = outputs.generate_result || '[]';
         console.log('generate_result raw:', generateResult.substring(0, 200));
         let jobs;
@@ -400,7 +402,7 @@ async function submitConfirm() {
         });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
-        const outputs = data.data?.outputs || {};
+        const outputs = data.data || {};
         const resultData = JSON.parse(outputs.confirm_result || '[]');
         document.getElementById('final-json').textContent = JSON.stringify(resultData, null, 2);
         document.getElementById('confirm-loading').classList.add('hidden');
@@ -419,6 +421,51 @@ function downloadResult() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = '岗位数据_' + state.job_name + '_' + new Date().toISOString().slice(0,10) + '.json'; a.click(); URL.revokeObjectURL(url);
+}
+
+async function exportExcel() {
+    await exportTable('xlsx');
+}
+
+async function exportCSV() {
+    await exportTable('csv');
+}
+
+async function exportTable(format) {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ 导出中...';
+    btn.disabled = true;
+    try {
+        const res = await fetch(API_BASE + '/api/job_ai/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobs: state.jobs, format: format })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || '导出失败');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.href = url;
+        const filename = '岗位数据_' + (state.job_name || '导出') + '_' + new Date().toISOString().slice(0,10) + '.' + format;
+        a.download = filename;
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    } catch (err) {
+        alert('导出失败：' + err.message);
+        console.error(err);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }
 </script>
 </body>
