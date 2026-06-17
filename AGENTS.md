@@ -1,6 +1,149 @@
-# Dify + 前后端项目开发参考手册
+# AI 智能体服务平台 - Dify + 前后端项目开发参考手册
 
-## 1. 项目范式
+> 基于 Dify + Flask 的插件化智能体服务平台。支持多智能体共用一套基础服务，通过插件化机制快速扩展新的 AI 功能。
+
+## 1. 项目总览
+
+### 1.1 项目结构
+
+```
+dify-project-template/
+├── AGENTS.md                      # 开发参考手册（本文件）
+├── deploy.sh                      # 部署脚本
+├── backend/                       # Flask 后端服务
+│   ├── app.py                     # 主服务入口（注册所有 Blueprint）
+│   ├── requirements.txt           # Python 依赖
+│   ├── core/                      # 核心模块（所有智能体共用）
+│   │   ├── dify_client.py        # Dify API 封装（上传文件、调用工作流）
+│   │   ├── auth.py               # Token 认证中间件
+│   │   └── response.py           # 统一响应格式
+│   └── plugins/                   # 各智能体插件
+│       ├── job_ai.py             # 岗位 AI 辅助生成
+│       └── ...                   # 后续新增的智能体
+├── frontend/                      # 前端页面
+│   ├── index.html                # 智能体平台入口（卡片式导航）
+│   ├── core/                     # 共用前端组件（预留）
+│   └── plugins/                  # 各智能体前端页面
+│       └── job_ai.html           # 岗位 AI 页面
+├── dsl/                           # Dify DSL 工作流定义
+│   └── workflow.yml              # 岗位 AI 工作流（示例）
+└── docs/
+    └── architecture.md           # 架构设计详细说明
+```
+
+### 1.2 核心架构
+
+#### 插件化设计
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        AI 智能体服务平台                      │
+│                                                              │
+│   ┌──────────┐    ┌──────────┐    ┌──────────┐             │
+│   │  岗位 AI  │    │  聊天助手 │    │  待新增   │             │
+│   │ job_ai   │    │ chat_bot│    │ xxx_ai   │             │
+│   └────┬─────┘    └────┬─────┘    └────┬─────┘             │
+│        │               │               │                    │
+│        └───────────────┼───────────────┘                    │
+│                        │                                    │
+│   ┌────────────────────┴────────────────────┐              │
+│   │              Flask 后端服务               │              │
+│   │  ┌────────────────────────────────────┐  │              │
+│   │  │  核心模块 (core/)                   │  │              │
+│   │  │  • dify_client.py - Dify API 封装   │  │              │
+│   │  │  • auth.py        - Token 认证      │  │              │
+│   │  │  • response.py    - 响应标准化      │  │              │
+│   │  └────────────────────────────────────┘  │              │
+│   │  ┌────────────────────────────────────┐  │              │
+│   │  │  插件模块 (plugins/)                │  │              │
+│   │  │  • job_ai.py      - 岗位 AI 路由    │  │              │
+│   │  │  • xxx_ai.py      - 其他智能体路由   │  │              │
+│   │  └────────────────────────────────────┘  │              │
+│   └──────────────────────────────────────────┘              │
+│                        │                                    │
+│                        │ Dify API                          │
+│                        ↓                                    │
+│   ┌──────────────────────────────────────────┐              │
+│   │           Dify 智能体引擎                 │              │
+│   │  • 岗位 AI 工作流                         │              │
+│   │  • 聊天助手工作流                         │              │
+│   │  • 其他工作流                             │              │
+│   └──────────────────────────────────────────┘              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 路由设计
+
+每个智能体拥有独立的路由前缀，互不影响：
+
+```
+# 岗位 AI
+POST /api/job_ai/analyze
+POST /api/job_ai/generate
+POST /api/job_ai/confirm
+
+# 聊天助手（示例）
+POST /api/chat_assistant/chat
+POST /api/chat_assistant/stream
+
+# 共用
+GET  /health
+GET  /                      # 智能体平台入口
+GET  /job_ai               # 岗位 AI 页面
+```
+
+## 2. 快速启动
+
+### 2.1 部署 Dify 工作流
+
+```bash
+# 安装 Dify Workflow CLI
+pip install dify-ai-workflow-tools
+
+# 登录并导入工作流（详见第 8 章 DSL 更新与发布流程）
+dify-workflow remote login --server http://<dify-host>:<port> --email <admin> --password <pwd> --profile default
+dify-workflow remote push --file dsl/workflow.yml --force
+```
+
+### 2.2 启动后端
+
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# 修改 plugins/job_ai.py 中的 DIFY_API_KEY
+python app.py          # 开发模式
+# 或
+gunicorn -w 1 -b 0.0.0.0:5000 --timeout 300 app:app   # 生产模式
+```
+
+### 2.3 访问前端
+
+```
+http://localhost:5000/          # 智能体平台入口
+http://localhost:5000/job_ai    # 岗位 AI
+```
+
+## 3. 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| **插件化架构** | 新增智能体只需复制模板、改字段名，30 分钟完成开发 |
+| **共用基础服务** | Dify API 调用、文件上传、Token 认证全部封装在 core/ 模块 |
+| **独立路由** | 每个智能体拥有 `/api/<name>/` 前缀，互不干扰 |
+| **认证预留** | `core/auth.py` 已预留外部 Token 验证接口，接入即可使用 |
+| **统一响应** | 所有 API 返回 `{code, message, data}` 标准化格式 |
+| **异常处理** | 全局捕获异常，确保任何错误都返回 JSON 而非 HTML |
+
+## 4. 关键配置
+
+- 每个插件中的 `DIFY_API_KEY` 需替换为实际 API Key
+- `frontend/index.html` 中的入口卡片需要手动添加新的智能体
+- 认证系统需要接入外部 Token 验证服务（`core/auth.py` 中预留接口）
+
+## 5. 项目范式
 
 本模板采用 **"Dify 智能体工作流 + Flask 代理后端 + 零依赖前端"** 的三层架构：
 
@@ -8,9 +151,9 @@
 - **Flask**：负责 API 代理、文件上传中转、数据清洗、安全隔离
 - **前端**：纯 HTML/CSS/JS，通过 FormData 与后端交互
 
-## 2. Dify 工作流设计规范
+## 6. Dify 工作流设计规范
 
-### 2.1 多阶段分支模式
+### 6.1 多阶段分支模式
 
 当一个业务流程需要用户多次确认时，使用 **单入口 + if-else 多分支** 模式：
 
@@ -48,7 +191,7 @@ cases:
 - `stage` 是唯一分支控制器，前端/后端通过传入不同的 `stage` 值触发不同分支
 - 每个分支的终点使用不同的 output key（`analyze_result` / `generate_result` / `confirm_result`），后端通过 key 区分
 
-### 2.2 文件处理规范
+### 6.2 文件处理规范
 
 **文件上传链路**：
 
@@ -84,7 +227,7 @@ cases:
 - `(type 'text-input') file in input form must be a string` → start_node 的 `file` 变量类型必须是 `file`，不是 `text-input`
 - `Output file_text is missing` → document-extractor 无法提取内容，检查 `is_array_file` 是否与文件数量匹配
 
-### 2.3 LLM Prompt 设计规范
+### 6.3 LLM Prompt 设计规范
 
 **JSON 输出强制格式**：
 
@@ -115,7 +258,7 @@ import re
 result = re.sub(r'<think>.*?</think>', '', result, flags=re.DOTALL).strip()
 ```
 
-### 2.4 Code 执行节点规范
+### 6.4 Code 执行节点规范
 
 **参数名必须完全匹配输入变量名**：
 
@@ -139,9 +282,9 @@ return {
 
 **代码必须从第 0 列顶格开始**：Dify 对缩进敏感，不要有多余空格。
 
-## 3. 前后端对接规范
+## 7. 前后端对接规范
 
-### 3.1 API 设计
+### 7.1 API 设计
 
 | 端点 | 方法 | 内容类型 | 说明 |
 |------|------|---------|------|
@@ -153,7 +296,7 @@ return {
 - 因为可能包含文件上传，multipart 可以一次性传文件和表单字段
 - confirm 阶段无文件，用 JSON 更简洁
 
-### 3.2 前端状态管理
+### 7.2 前端状态管理
 
 ```javascript
 let state = {
@@ -180,7 +323,7 @@ Step 3 (生成) ← /api/generate → state.jobs
 Step 4 (导出) ← /api/confirm → 最终 JSON
 ```
 
-### 3.3 文件上传前端实现
+### 7.3 文件上传前端实现
 
 **Tab 切换模式**：
 
@@ -233,9 +376,9 @@ function submitAnalyze() {
 }
 ```
 
-## 4. DSL 更新与发布流程
+## 8. DSL 更新与发布流程
 
-### 4.1 完整流程
+### 8.1 完整流程
 
 ```bash
 # 1. 激活环境
@@ -269,7 +412,7 @@ curl -X POST "http://127.0.0.1:8081/console/api/apps/<app-id>/workflows/publish"
   -d '{"marked_name":"v1.0","marked_comment":"初始版本"}'
 ```
 
-### 4.2 密码重置（备用）
+### 8.2 密码重置（备用）
 
 如果不知道管理员密码，直接重置数据库：
 
@@ -294,7 +437,7 @@ PYEOF
 docker compose exec -T db_postgres psql -U postgres -d dify -c "<上面的SQL>"
 ```
 
-## 5. 常见问题速查
+## 9. 常见问题速查
 
 | 现象 | 根因 | 解决 |
 |------|------|------|
@@ -310,9 +453,9 @@ docker compose exec -T db_postgres psql -U postgres -d dify -c "<上面的SQL>"
 | 文件上传后第二步内容为空 | doc_extractor 配置错误 | 检查 `variable_selector` 和 `is_array_file` |
 | 固定生成 3 个岗位 | LLM prompt 示例固定写了 3 | 示例改为 `suggested_count:N` 并加明确指令 |
 
-## 6. 快速复用指南
+## 10. 快速复用指南
 
-### 6.1 新建一个 Dify + 前后端项目
+### 10.1 新建一个 Dify + 前后端项目
 
 1. **复制本模板**
    ```bash
@@ -332,7 +475,7 @@ docker compose exec -T db_postgres psql -U postgres -d dify -c "<上面的SQL>"
 
 4. **创建 API Key 并配置后端**
    ```bash
-   # 见 AGENTS.md 第 4.1 节
+   # 见第 8 章 DSL 更新与发布流程
    ```
 
 5. **启动服务**
@@ -340,7 +483,7 @@ docker compose exec -T db_postgres psql -U postgres -d dify -c "<上面的SQL>"
    cd backend && gunicorn -w 1 -b 0.0.0.0:5000 app:app
    ```
 
-### 6.2 新增一个工作流分支
+### 10.2 新增一个工作流分支
 
 1. 在 `start_node` 的 variables 中确保有分支控制器（如 `stage`）
 2. 在 if-else 节点中新增 case
@@ -348,3 +491,41 @@ docker compose exec -T db_postgres psql -U postgres -d dify -c "<上面的SQL>"
 4. 在新分支的 end 节点声明新的 output key
 5. 后端新增对应 API 端点
 6. 前端新增对应步骤
+
+### 10.3 新增一个智能体插件
+
+#### 后端（3 步）
+
+1. **复制插件模板**
+   ```bash
+   cp backend/plugins/job_ai.py backend/plugins/xxx_ai.py
+   ```
+
+2. **修改插件代码**
+   - 修改 `Blueprint` 名称和 `url_prefix`
+   - 修改 Dify API Key（每个智能体独立的工作流）
+   - 调整表单字段
+
+3. **注册插件**（`app.py` 中加一行）
+   ```python
+   from plugins.xxx_ai import xxx_ai_bp
+   app.register_blueprint(xxx_ai_bp)
+   ```
+
+#### 前端（2 步）
+
+1. **复制前端模板**
+   ```bash
+   cp frontend/plugins/job_ai.html frontend/plugins/xxx_ai.html
+   ```
+
+2. **修改 API 路径和页面内容**
+   ```javascript
+   // 将 API_BASE + '/api/job_ai/xxx' 改为 '/api/xxx_ai/xxx'
+   ```
+
+3. **添加入口卡片**（`frontend/index.html`）
+
+#### Dify DSL（1 步）
+
+新建 `dsl/xxx_ai.yml`，设计工作流，通过 CLI 推送。

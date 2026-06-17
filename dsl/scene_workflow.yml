@@ -1,0 +1,581 @@
+version: 0.6.0
+kind: app
+app:
+  name: 场景AI辅助生成
+  mode: workflow
+  icon: 🎬
+  icon_type: emoji
+  icon_background: '#E6F4FF'
+  description: ''
+  use_icon_as_answer_icon: false
+workflow:
+  graph:
+    nodes:
+    - id: start_node
+      type: custom
+      data:
+        type: start
+        title: 用户输入
+        selected: false
+        variables:
+        - variable: stage
+          label: 阶段
+          type: text-input
+          required: true
+          options: []
+          placeholder: analyze / generate / confirm
+        - variable: scene_name
+          label: 场景名称
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: background
+          label: 场景背景简介
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: difficulty
+          label: 场景难度
+          type: text-input
+          required: false
+          options: []
+          placeholder: 初级 / 中级 / 高级
+        - variable: industry
+          label: 所属行业
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: majors
+          label: 适用专业
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: file
+          label: 上传文件
+          type: file
+          required: false
+          options: []
+          value_selector: []
+        - variable: file_text
+          label: 文件提取文本
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: count
+          label: 确认数量
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: suggest_task
+          label: 选中的任务
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+        - variable: choose_id
+          label: 选中任务ID
+          type: text-input
+          required: false
+          options: []
+          placeholder: ''
+        - variable: scenes_json
+          label: 确认后的JSON
+          type: paragraph
+          required: false
+          options: []
+          placeholder: ''
+      position:
+        x: 79
+        y: 282
+      positionAbsolute:
+        x: 79
+        y: 282
+      width: 242
+      height: 340
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: ifelse_node
+      type: custom
+      data:
+        type: if-else
+        title: 条件分支
+        selected: false
+        cases:
+        - id: 'true'
+          case_id: 'true'
+          conditions:
+          - id: cond1
+            comparison_operator: is
+            value: analyze
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+        - id: branch_generate
+          case_id: branch_generate
+          conditions:
+          - id: cond2
+            comparison_operator: is
+            value: generate
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+        - id: branch_confirm
+          case_id: branch_confirm
+          conditions:
+          - id: cond3
+            comparison_operator: is
+            value: confirm
+            varType: string
+            variable_selector:
+            - start_node
+            - stage
+          logical_operator: and
+      position:
+        x: 381
+        y: 282
+      positionAbsolute:
+        x: 381
+        y: 282
+      width: 242
+      height: 220
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: doc_extractor
+      type: custom
+      data:
+        type: document-extractor
+        title: 文档提取器
+        selected: false
+        is_array_file: false
+        variable_selector:
+        - start_node
+        - file
+      position:
+        x: 683
+        y: 151
+      positionAbsolute:
+        x: 683
+        y: 151
+      width: 242
+      height: 104
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_analyze
+      type: custom
+      data:
+        type: llm
+        title: LLM-分析建议
+        selected: false
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys1
+          role: system
+          text: 你是一位资深职业教育课程设计专家。根据以下场景信息，建议应该拆分为多少个任务来支撑该场景的教学与实训。\n\n场景名称：{{#start_node.scene_name#}}\n背景简介：{{#start_node.background#}}\n场景难度：{{#start_node.difficulty#}}\n所属行业：{{#start_node.industry#}}\n适用专业：{{#start_node.majors#}}\n文件内容：{{#doc_extractor.text#}}\n\n要求：\n1. 分析输入内容的广度和深度，建议合理的任务数量（3-8个）\n2. 每个建议任务给出简短命名和理由\n3. 必须按以下 JSON 格式输出，不要包含 markdown 代码块，不要包含其他说明文字。注意：suggested_count 必须是根据内容深度合理决定的 3-8 之间的数字，不要固定输出 3：\n\n{\"suggested_count\":N,\"reasoning\":\"分析理由...\",\"suggested_tasks\":[{\"name\":\"任务名称\",\"reason\":\"理由...\"}]}
+        vision:
+          enabled: false
+      position:
+        x: 966
+        y: 151
+      positionAbsolute:
+        x: 966
+        y: 151
+      width: 242
+      height: 88
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_analyze
+      type: custom
+      data:
+        type: end
+        title: 输出-分析建议
+        selected: false
+        outputs:
+        - value_selector:
+          - llm_analyze
+          - text
+          value_type: string
+          variable: analyze_result
+        - value_selector:
+          - doc_extractor
+          - text
+          value_type: string
+          variable: file_text
+      position:
+        x: 1239
+        y: 151
+      positionAbsolute:
+        x: 1239
+        y: 151
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: doc_extractor_generate
+      type: custom
+      data:
+        type: document-extractor
+        title: 文档提取器-generate
+        selected: false
+        is_array_file: false
+        variable_selector:
+        - start_node
+        - file
+      position:
+        x: 550
+        y: 282
+      positionAbsolute:
+        x: 550
+        y: 282
+      width: 242
+      height: 104
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_generate
+      type: custom
+      data:
+        type: llm
+        title: LLM-生成场景
+        selected: false
+        context:
+          enabled: false
+          variable_selector: []
+        model:
+          completion_params:
+            temperature: 0.7
+          mode: chat
+          name: deepseek-v4-flash
+          provider: langgenius/deepseek/deepseek
+        prompt_template:
+        - id: sys2
+          role: system
+          text: "你是一位专业的职业教育场景与任务设计专家。请根据以下需求，生成 {{#start_node.count#}} 个任务的完整场景 JSON 数据。
+
+输入信息：
+- 场景名称：{{#start_node.scene_name#}}
+- 背景简介：{{#start_node.background#}}
+- 场景难度：{{#start_node.difficulty#}}
+- 所属行业：{{#start_node.industry#}}
+- 适用专业：{{#start_node.majors#}}
+- 文件内容（缓存）：{{#start_node.file_text#}}
+- 新上传文件内容：{{#doc_extractor_generate.text#}}
+- 用户选中的任务：{{#start_node.suggest_task#}}
+
+输出要求：
+1. 只输出纯 JSON 对象，不要任何 markdown 代码块（不要 ```json），不要任何解释文字
+2. 场景对象必须包含以下字段：
+   {
+     \"name\": \"场景名称\",
+     \"background\": \"背景简介\",
+     \"difficulty\": \"难度\",
+     \"industry\": \"所属行业\",
+     \"majors\": [\"专业1\", \"专业2\"],
+     \"tasks\": [
+       {
+         \"name\": \"任务名称\",
+         \"description\": \"任务简介\",
+         \"difficulty\": \"难度\",
+         \"hours\": 4,
+         \"instructions\": \"任务要求和完成说明，类似实训任务书\",
+         \"knowledgePoints\": [\"知识点1\", \"知识点2\"],
+         \"abilityBindings\": [{\"id\": \"\", \"name\": \"能力点名称\", \"domain\": \"能力域\"}],
+         \"resources\": [{\"name\": \"资源名称\", \"type\": \"工具/场地/文件\", \"description\": \"描述\"}],
+         \"evaluationForm\": \"测评形式，如试卷、汇报、答辩、现场问答等\",
+         \"evaluationStandard\": {
+           \"type\": \"rubric\",
+           \"rubric\": {
+             \"dimensions\": [
+               {
+                 \"name\": \"维度名称\",
+                 \"levels\": [
+                   {\"level\": \"优秀\", \"description\": \"表现描述\"},
+                   {\"level\": \"良好\", \"description\": \"表现描述\"},
+                   {\"level\": \"合格\", \"description\": \"表现描述\"},
+                   {\"level\": \"不合格\", \"description\": \"表现描述\"}
+                 ]
+               }
+             ]
+           }
+         }
+       }
+     ]
+   }
+3. 必须生成恰好 {{#start_node.count#}} 个任务，每个任务都要包含上述完整字段
+4. 评价标准默认使用 type=\"rubric\" 形式，若任务更适合量化打分可改为 type=\"scoring\"，评分规则结构：{\"type\":\"scoring\",\"scoring\":{\"items\":[{\"name\":\"评分项\",\"score\":10,\"criteria\":\"评分标准\"}]}}
+5. 能力点只需引用名称和能力域，不需要展开详细定义
+6. 输出必须是可以直接解析的 JSON 对象，前后不要加任何文字
+
+注意：请严格按照用户选中的任务名称和方向来生成，不要偏离用户的选择。
+
+示例输出（仅格式参考，内容请根据输入生成）：
+{\"name\":\"智能客服系统部署实训\",\"background\":\"通过真实企业客服场景...\",\"difficulty\":\"中级\",\"industry\":\"互联网\",\"majors\":[\"软件技术\"],\"tasks\":[{\"name\":\"需求分析与方案设计\",\"description\":\"分析客户需求\",\"difficulty\":\"中级\",\"hours\":4,\"instructions\":\"完成需求文档...\",\"knowledgePoints\":[\"需求分析方法\"],\"abilityBindings\":[{\"id\":\"\",\"name\":\"需求分析\",\"domain\":\"分析能力\"}],\"resources\":[{\"name\":\"需求模板\",\"type\":\"文件\",\"description\":\"Word模板\"}],\"evaluationForm\":\"方案汇报\",\"evaluationStandard\":{\"type\":\"rubric\",\"rubric\":{\"dimensions\":[{\"name\":\"方案完整性\",\"levels\":[{\"level\":\"优秀\",\"description\":\"覆盖全部需求点\"}]}]}}}]}"
+        vision:
+          enabled: false
+      position:
+        x: 850
+        y: 282
+      positionAbsolute:
+        x: 850
+        y: 282
+      width: 242
+      height: 88
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_generate
+      type: custom
+      data:
+        type: code
+        title: 代码执行-JSON校验
+        selected: false
+        code_language: python3
+        code: "import json\nimport re\n\ndef main(raw_json: str) -> dict:\n    text = raw_json.strip()\n    # 1. 去掉 <think>...</think> 思考过程\n    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n    # 2. 清理 markdown 代码块标记\n    text = re.sub(r\"^```json\\s*\", \"\", text, flags=re.IGNORECASE)\n    text = re.sub(r\"^```\\s*\", \"\", text)\n    text = re.sub(r\"\\s*```$\", \"\", text)\n    text = text.strip()\n    \n    scene = None\n    # 3. 尝试直接解析\n    try:\n        scene = json.loads(text)\n    except Exception:\n        pass\n    \n    # 4. 尝试提取 JSON 对象\n    if scene is None:\n        match = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n        if match:\n            try:\n                scene = json.loads(match.group(0))\n            except Exception:\n                pass\n    \n    if scene is None:\n        return {\n            \"success\": False,\n            \"scene\": \"{}\",\n            \"preview\": json.dumps({\"_error\": True, \"_message\": \"LLM输出无法解析为JSON\", \"_raw_preview\": raw_json[:500]}, ensure_ascii=False)\n        }\n    \n    if isinstance(scene, list) and len(scene) > 0:\n        scene = scene[0]\n    \n    scene.setdefault(\"name\", \"\")\n    scene.setdefault(\"background\", \"\")\n    scene.setdefault(\"difficulty\", \"\")\n    scene.setdefault(\"industry\", \"\")\n    scene.setdefault(\"majors\", [])\n    scene.setdefault(\"tasks\", [])\n    \n    for task in scene.get(\"tasks\", []):\n        task.setdefault(\"name\", \"\")\n        task.setdefault(\"description\", \"\")\n        task.setdefault(\"difficulty\", \"\")\n        task.setdefault(\"hours\", 0)\n        task.setdefault(\"instructions\", \"\")\n        task.setdefault(\"knowledgePoints\", [])\n        task.setdefault(\"abilityBindings\", [])\n        task.setdefault(\"resources\", [])\n        task.setdefault(\"evaluationForm\", \"\")\n        task.setdefault(\"evaluationStandard\", {\"type\": \"rubric\", \"rubric\": {\"dimensions\": []}})\n    \n    return {\n        \"success\": True,\n        \"scene\": json.dumps(scene, ensure_ascii=False),\n        \"preview\": json.dumps(scene, ensure_ascii=False, indent=2)\n    }\n"
+        variables:
+        - value_selector:
+          - llm_generate
+          - text
+          value_type: string
+          variable: raw_json
+        outputs:
+          success:
+            children: null
+            type: boolean
+          scene:
+            children: null
+            type: string
+          preview:
+            children: null
+            type: string
+      position:
+        x: 1100
+        y: 282
+      positionAbsolute:
+        x: 1100
+        y: 282
+      width: 242
+      height: 52
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_generate
+      type: custom
+      data:
+        type: end
+        title: 输出-场景预览
+        selected: false
+        outputs:
+        - value_selector:
+          - code_generate
+          - preview
+          value_type: string
+          variable: generate_result
+        - value_selector:
+          - code_generate
+          - success
+          value_type: boolean
+          variable: success
+      position:
+        x: 1400
+        y: 282
+      positionAbsolute:
+        x: 1400
+        y: 282
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_confirm
+      type: custom
+      data:
+        type: code
+        title: 代码执行-确认输出
+        selected: false
+        code_language: python3
+        code: "import json\n\ndef main(arg1: str) -> dict:\n    input_json = arg1.strip()\n    # 先尝试直接解析\n    try:\n        scene = json.loads(input_json)\n    except Exception as e1:\n        # 尝试去掉可能的 markdown 标记\n        cleaned = input_json\n        if cleaned.startswith(\"```\"):\n            lines = cleaned.split(\"\\n\")\n            cleaned = \"\\n\".join(lines[1:-1] if lines[-1].strip() == \"```\" else lines[1:])\n        try:\n            scene = json.loads(cleaned.strip())\n        except Exception as e2:\n            return {\n                \"status\": \"error\",\n                \"data\": \"JSON解析失败: \" + str(e2) + \" | 原始输入前200字: \" + input_json[:200]\n            }\n    \n    if isinstance(scene, list) and len(scene) > 0:\n        scene = scene[0]\n    \n    cleaned_scene = {\n        \"name\": scene.get(\"name\", \"\"),\n        \"background\": scene.get(\"background\", \"\"),\n        \"difficulty\": scene.get(\"difficulty\", \"\"),\n        \"industry\": scene.get(\"industry\", \"\"),\n        \"majors\": scene.get(\"majors\", []),\n        \"tasks\": []\n    }\n    \n    for task in scene.get(\"tasks\", []):\n        cleaned_scene[\"tasks\"].append({\n            \"name\": task.get(\"name\", \"\"),\n            \"description\": task.get(\"description\", \"\"),\n            \"difficulty\": task.get(\"difficulty\", \"\"),\n            \"hours\": task.get(\"hours\", 0),\n            \"instructions\": task.get(\"instructions\", \"\"),\n            \"knowledgePoints\": task.get(\"knowledgePoints\", []),\n            \"abilityBindings\": task.get(\"abilityBindings\", []),\n            \"resources\": task.get(\"resources\", []),\n            \"evaluationForm\": task.get(\"evaluationForm\", \"\"),\n            \"evaluationStandard\": task.get(\"evaluationStandard\", {\"type\": \"rubric\", \"rubric\": {\"dimensions\": []}})\n        })\n    \n    return {\n        \"status\": \"confirmed\",\n        \"data\": json.dumps(cleaned_scene, ensure_ascii=False)\n    }\n"
+        variables:
+        - value_selector:
+          - start_node
+          - scenes_json
+          value_type: string
+          variable: arg1
+        outputs:
+          status:
+            children: null
+            type: string
+          data:
+            children: null
+            type: string
+      position:
+        x: 683
+        y: 382
+      positionAbsolute:
+        x: 683
+        y: 382
+      width: 242
+      height: 52
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_confirm
+      type: custom
+      data:
+        type: end
+        title: 输出-标准JSON
+        selected: false
+        outputs:
+        - value_selector:
+          - code_confirm
+          - data
+          value_type: string
+          variable: confirm_result
+        - value_selector:
+          - code_confirm
+          - status
+          value_type: string
+          variable: status
+      position:
+        x: 966
+        y: 382
+      positionAbsolute:
+        x: 966
+        y: 382
+      width: 242
+      height: 114
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
+    - id: e1
+      source: start_node
+      sourceHandle: source
+      target: ifelse_node
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: start
+        targetType: if-else
+    - id: e2
+      source: ifelse_node
+      sourceHandle: 'true'
+      target: doc_extractor
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+    - id: e3
+      source: doc_extractor
+      sourceHandle: source
+      target: llm_analyze
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+    - id: e4
+      source: llm_analyze
+      sourceHandle: source
+      target: end_analyze
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: end
+    - id: e5
+      source: ifelse_node
+      sourceHandle: branch_generate
+      target: doc_extractor_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: document-extractor
+    - id: e5_1
+      source: doc_extractor_generate
+      sourceHandle: source
+      target: llm_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: document-extractor
+        targetType: llm
+    - id: e6
+      source: llm_generate
+      sourceHandle: source
+      target: code_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: llm
+        targetType: code
+    - id: e7
+      source: code_generate
+      sourceHandle: source
+      target: end_generate
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end
+    - id: e8
+      source: ifelse_node
+      sourceHandle: branch_confirm
+      target: code_confirm
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: if-else
+        targetType: code
+    - id: e9
+      source: code_confirm
+      sourceHandle: source
+      target: end_confirm
+      targetHandle: target
+      type: custom
+      data:
+        isInIteration: false
+        isInLoop: false
+        sourceType: code
+        targetType: end

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>场景 AI 辅助生成</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+.container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+h1 { font-size: 24px; margin-bottom: 24px; color: #1a1a1a; display: flex; align-items: center; gap: 12px; }
+.tag-purple { display: inline-block; background: #722ed1; color: white; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; }
+.steps { display: flex; margin-bottom: 32px; }
+.step { flex: 1; text-align: center; padding: 12px; border-bottom: 3px solid #e0e0e0; color: #999; font-size: 14px; }
+.step.active { border-bottom-color: #1677ff; color: #1677ff; font-weight: 600; }
+.step.done { border-bottom-color: #52c41a; color: #52c41a; }
+.form-group { margin-bottom: 20px; }
+label { display: block; margin-bottom: 6px; font-size: 14px; color: #333; font-weight: 500; }
+input[type="text"], textarea, select { width: 100%; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; transition: border-color 0.2s; }
+input[type="text"]:focus, textarea:focus, select:focus { outline: none; border-color: #1677ff; }
+textarea { min-height: 100px; resize: vertical; }
+.hint { font-size: 12px; color: #999; margin-top: 4px; }
+.required { color: #ff4d4f; margin-left: 2px; }
+.btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1677ff; color: white; }
+.btn-primary:hover { background: #0958d9; }
+.btn-primary:disabled { background: #bae0ff; cursor: not-allowed; }
+.btn-default { background: white; border: 1px solid #d9d9d9; color: #333; }
+.btn-default:hover { border-color: #1677ff; color: #1677ff; }
+.actions { margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }
+.actions-right { display: flex; gap: 8px; }
+.loading { text-align: center; padding: 40px; color: #666; }
+.spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid #f3f3f3; border-top: 2px solid #1677ff; border-radius: 50%; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.suggest-box { background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.suggest-box h3 { color: #389e0d; font-size: 16px; margin-bottom: 8px; }
+.suggest-box p { color: #666; font-size: 14px; line-height: 1.6; }
+
+/* Tab 切换 */
+.tabs { display: flex; border-bottom: 1px solid #e0e0e0; margin-bottom: 24px; }
+.tab { padding: 10px 20px; cursor: pointer; font-size: 14px; color: #666; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab:hover { color: #1677ff; }
+.tab.active { color: #1677ff; border-bottom-color: #1677ff; font-weight: 500; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* 虚线上传框 */
+.upload-zone { border: 2px dashed #d9d9d9; border-radius: 12px; padding: 60px 40px; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+.upload-zone:hover { border-color: #1677ff; background: #f0f5ff; }
+.upload-zone .upload-icon { font-size: 48px; color: #bfbfbf; margin-bottom: 12px; }
+.upload-zone .upload-text { font-size: 16px; color: #333; margin-bottom: 8px; }
+.upload-zone .upload-hint { font-size: 13px; color: #999; }
+.upload-zone.has-file { border-color: #52c41a; background: #f6ffed; }
+.upload-zone.has-file .upload-icon { color: #52c41a; }
+
+/* 任务选择卡片 */
+.task-select-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin: 10px 0; display: flex; align-items: flex-start; gap: 12px; cursor: pointer; transition: all 0.2s; }
+.task-select-card:hover { border-color: #1677ff; background: #f0f5ff; }
+.task-select-card.selected { border-color: #1677ff; background: #f0f5ff; }
+.task-select-card input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+.task-select-card .content { flex: 1; }
+.task-select-card .name { font-weight: 600; color: #1a1a1a; font-size: 15px; margin-bottom: 4px; }
+.task-select-card .reason { font-size: 13px; color: #666; line-height: 1.5; }
+
+/* 可折叠结果卡片 */
+.collapsible { border: 1px solid #adc6ff; border-radius: 8px; overflow: hidden; }
+.collapsible-header { background: #f0f5ff; padding: 12px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
+.collapsible-header:hover { background: #e6f0ff; }
+.collapsible-header h3 { margin: 0; font-size: 16px; color: #1677ff; }
+.collapsible-toggle { font-size: 18px; color: #1677ff; transition: transform 0.2s; }
+.collapsible.collapsed .collapsible-toggle { transform: rotate(-90deg); }
+.collapsible-body { padding: 16px; transition: max-height 0.3s ease, padding 0.3s ease; overflow: auto; }
+.collapsible.collapsed .collapsible-body { max-height: 0; padding: 0 16px; overflow: hidden; }
+
+/* 场景/任务卡片 */
+.scene-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+.scene-card .scene-header { background: #1677ff; color: white; padding: 14px 16px; font-weight: 600; font-size: 16px; }
+.scene-card .scene-info { padding: 16px; background: #fafafa; border-bottom: 1px solid #e0e0e0; }
+.scene-card .scene-info-item { margin: 6px 0; font-size: 14px; color: #333; }
+.scene-card .scene-info-item label { display: inline; font-weight: 500; color: #666; margin-right: 6px; }
+.task-card { border-top: 1px solid #f0f0f0; padding: 16px; }
+.task-card:first-child { border-top: none; }
+.task-card .task-header { font-weight: 600; color: #1677ff; font-size: 15px; margin-bottom: 12px; }
+.task-card table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.task-card th, .task-card td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+.task-card th { background: #fafafa; color: #666; font-weight: 500; width: 120px; }
+.task-card td { color: #333; }
+.task-card .tag { display: inline-block; background: #f0f5ff; color: #1677ff; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+.task-card .sub-section { font-weight: 600; color: #1677ff; margin: 8px 0 4px; font-size: 13px; }
+.task-card .sub-item { margin: 4px 0; padding-left: 12px; border-left: 2px solid #e0e0e0; }
+.task-card .sub-item-title { font-weight: 500; color: #333; }
+.task-card .sub-item-desc { color: #666; font-size: 12px; margin-top: 2px; }
+.task-card .rubric-table { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+.task-card .rubric-table th, .task-card .rubric-table td { border: 1px solid #e0e0e0; padding: 6px 8px; }
+.task-card .rubric-table th { background: #f0f5ff; color: #1677ff; width: auto; }
+
+.result-box { background: #f0f5ff; border: 1px solid #adc6ff; border-radius: 8px; padding: 16px; }
+.result-box pre { background: white; padding: 16px; border-radius: 4px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎬 场景 AI 辅助生成 <span class="tag-purple">来自：AI 服务平台</span></h1>
+<div class="steps">
+    <div class="step active" id="step-indicator-1">1. 输入需求</div>
+    <div class="step" id="step-indicator-2">2. 选择任务</div>
+    <div class="step" id="step-indicator-3">3. 预览场景</div>
+    <div class="step" id="step-indicator-4">4. 导出数据</div>
+</div>
+
+<!-- 第一步：输入需求 -->
+<div id="step-1">
+    <div class="tabs">
+        <div class="tab active" data-tab="manual" onclick="switchTab('manual')">✏️ 输入场景关键信息后拆解任务</div>
+        <div class="tab" data-tab="upload" onclick="switchTab('upload')">📄 从方案文件中提取场景并拆解任务</div>
+    </div>
+
+    <!-- 手动编辑 -->
+    <div id="tab-manual" class="tab-content active">
+        <div class="form-group"><label>场景名称 <span class="required">*</span></label><input type="text" id="scene_name" placeholder="例如：智能客服系统部署实训"></div>
+        <div class="form-group"><label>背景简介 <span class="required">*</span></label><textarea id="background" placeholder="请输入场景的背景介绍"></textarea></div>
+        <div class="form-group"><label>场景难度 <span class="required">*</span></label>
+            <select id="difficulty">
+                <option value="">请选择</option>
+                <option value="初级">初级</option>
+                <option value="中级">中级</option>
+                <option value="高级">高级</option>
+            </select>
+        </div>
+        <div class="form-group"><label>所属行业 <span class="required">*</span></label><input type="text" id="industry" placeholder="例如：互联网"></div>
+        <div class="form-group"><label>适用专业 <span class="required">*</span></label><textarea id="majors" placeholder="例如：软件技术、计算机应用技术（多个专业用逗号分隔）"></textarea></div>
+    </div>
+
+    <!-- 上传方案文件 -->
+    <div id="tab-upload" class="tab-content">
+        <div class="form-group">
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file').click()">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text" id="upload-text">点击上传方案文件</div>
+                <div class="upload-hint">支持 PDF、Word 文件，AI 会自动提取内容辅助分析</div>
+            </div>
+            <input type="file" id="file" accept=".pdf,.docx" style="display:none" onchange="onFileSelected(this)">
+        </div>
+    </div>
+
+    <div class="actions">
+        <span></span>
+        <button class="btn btn-primary" onclick="submitAnalyze()">下一步 →</button>
+    </div>
+</div>
+
+<!-- 第二步：选择任务 -->
+<div id="step-2" class="hidden">
+    <div id="analyze-loading" class="loading"><span class="spinner"></span> AI 正在分析场景需求，请稍候...</div>
+    <div id="analyze-result" class="hidden">
+        <div class="suggest-box"><h3>📊 AI 分析结论</h3><p id="analyze-reasoning"></p></div>
+        <h3 style="margin-bottom: 12px;">请选择需要生成的任务（可多选）</h3>
+        <div id="suggested-tasks"></div>
+        <div class="actions">
+            <span></span>
+            <button class="btn btn-primary" onclick="submitGenerate()">下一步 →</button>
+        </div>
+    </div>
+</div>
+
+<!-- 第三步：预览场景 -->
+<div id="step-3" class="hidden">
+    <div id="generate-loading" class="loading"><span class="spinner"></span> AI 正在生成场景数据，请稍候...</div>
+    <div id="generate-result" class="hidden">
+        <h3 style="margin-bottom: 16px;">📋 生成的场景预览</h3>
+        <div id="scene-preview"></div>
+        <div class="actions">
+            <span></span>
+            <button class="btn btn-primary" onclick="submitConfirm()">下一步 →</button>
+        </div>
+    </div>
+</div>
+
+<!-- 第四步：导出数据 -->
+<div id="step-4" class="hidden">
+    <div id="confirm-loading" class="loading"><span class="spinner"></span> 正在格式化输出...</div>
+    <div id="confirm-result" class="hidden">
+        <div class="result-box collapsible collapsed" id="result-collapsible">
+            <div class="collapsible-header" onclick="toggleResult()">
+                <h3>✅ 最终输出结果</h3>
+                <span class="collapsible-toggle">▼</span>
+            </div>
+            <div class="collapsible-body"><pre id="final-json"></pre></div>
+        </div>
+        <div class="actions" style="margin-top: 16px;">
+            <span></span>
+            <div class="actions-right">
+                <button class="btn btn-default" onclick="downloadResult()">💾 下载 JSON</button>
+                <button class="btn btn-default" onclick="exportExcel()">📊 导出 Excel</button>
+                <button class="btn btn-default" onclick="exportCSV()">📄 导出 CSV</button>
+                <button class="btn btn-primary" onclick="location.reload()">🔄 再生成一个</button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script>
+const API_BASE = 'http://111.170.170.202:5000';
+let state = { scene_name: '', background: '', difficulty: '', industry: '', majors: '', uploadedFile: null, file_text: '', suggested_tasks: [], selected_tasks: [], scene: {} };
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="' + tab + '"]').classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function onFileSelected(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById('upload-zone').classList.add('has-file');
+        document.getElementById('upload-text').textContent = '已选择：' + file.name;
+        state.uploadedFile = file;
+    }
+}
+
+function goStep(n) {
+    [1,2,3,4].forEach(i => {
+        document.getElementById('step-' + i).classList.add('hidden');
+        document.getElementById('step-indicator-' + i).classList.remove('active');
+        if (i < n) document.getElementById('step-indicator-' + i).classList.add('done');
+        else document.getElementById('step-indicator-' + i).classList.remove('done');
+    });
+    document.getElementById('step-' + n).classList.remove('hidden');
+    document.getElementById('step-indicator-' + n).classList.add('active');
+}
+
+function getActiveTab() {
+    return document.querySelector('.tab.active').dataset.tab;
+}
+
+async function submitAnalyze() {
+    const tab = getActiveTab();
+    const scene_name = document.getElementById('scene_name').value.trim();
+    const background = document.getElementById('background').value.trim();
+    const difficulty = document.getElementById('difficulty').value.trim();
+    const industry = document.getElementById('industry').value.trim();
+    const majors = document.getElementById('majors').value.trim();
+    const fileInput = document.getElementById('file');
+    const file = fileInput.files[0];
+
+    if (tab === 'manual') {
+        if (!scene_name) { alert('请填写场景名称'); return; }
+        if (!background) { alert('请填写背景简介'); return; }
+        if (!difficulty) { alert('请选择场景难度'); return; }
+        if (!industry) { alert('请填写所属行业'); return; }
+        if (!majors) { alert('请填写适用专业'); return; }
+    } else {
+        if (!file) { alert('请上传方案文件'); return; }
+    }
+
+    state.scene_name = scene_name; state.background = background;
+    state.difficulty = difficulty; state.industry = industry;
+    state.majors = majors;
+    state.uploadedFile = file;
+    goStep(2);
+    const formData = new FormData();
+    formData.append('scene_name', state.scene_name);
+    formData.append('background', state.background);
+    formData.append('difficulty', state.difficulty);
+    formData.append('industry', state.industry);
+    formData.append('majors', state.majors);
+    if (file) formData.append('file', file);
+    try {
+        const res = await fetch(API_BASE + '/api/scene_ai/analyze', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data || {};
+        state.file_text = outputs.file_text || '';
+        const analyzeData = JSON.parse(outputs.analyze_result || '{}');
+        state.suggested_tasks = analyzeData.suggested_tasks || [];
+        document.getElementById('analyze-reasoning').textContent = analyzeData.reasoning || '';
+        const container = document.getElementById('suggested-tasks');
+        container.innerHTML = '';
+        state.suggested_tasks.forEach((task, idx) => {
+            const card = document.createElement('div');
+            card.className = 'task-select-card';
+            card.dataset.idx = idx;
+            card.onclick = function(e) { if(e.target.type !== 'checkbox') toggleSelect(this, idx); };
+            card.innerHTML = '<input type="checkbox" onchange="toggleSelect(this.parentElement, ' + idx + ')" onclick="event.stopPropagation()">' +
+                '<div class="content"><div class="name">' + (task.name || '') + '</div><div class="reason">' + (task.reason || '') + '</div></div>';
+            container.appendChild(card);
+        });
+        document.getElementById('analyze-loading').classList.add('hidden');
+        document.getElementById('analyze-result').classList.remove('hidden');
+    } catch (err) { alert('分析失败：' + err.message); console.error(err); goStep(1); }
+}
+
+function toggleSelect(card, idx) {
+    const cb = card.querySelector('input[type="checkbox"]');
+    cb.checked = !cb.checked;
+    if (cb.checked) card.classList.add('selected');
+    else card.classList.remove('selected');
+}
+
+async function submitGenerate() {
+    const cards = document.querySelectorAll('.task-select-card.selected');
+    if (cards.length === 0) { alert('请至少选择一个任务'); return; }
+    const selectedIndices = [];
+    cards.forEach(c => selectedIndices.push(parseInt(c.dataset.idx)));
+    state.selected_tasks = selectedIndices.map(i => state.suggested_tasks[i]);
+    const choose_id = state.selected_tasks.map(t => t.id || t.name).join(',');
+    const suggest_task = JSON.stringify(state.selected_tasks);
+    goStep(3);
+    const formData = new FormData();
+    formData.append('suggest_task', suggest_task);
+    formData.append('choose_id', choose_id);
+    formData.append('scene_name', state.scene_name);
+    formData.append('background', state.background);
+    formData.append('difficulty', state.difficulty);
+    formData.append('industry', state.industry);
+    formData.append('majors', state.majors);
+    formData.append('file_text', state.file_text || '');
+    formData.append('count', state.selected_tasks.length);
+    if (state.uploadedFile) formData.append('file', state.uploadedFile);
+    try {
+        const res = await fetch(API_BASE + '/api/scene_ai/generate', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data || {};
+        let generateResult = outputs.generate_result || '{}';
+        console.log('generate_result raw:', generateResult.substring(0, 200));
+        let scene;
+        try {
+            scene = JSON.parse(generateResult);
+        } catch (parseErr) {
+            console.error('JSON 解析失败，尝试提取对象:', generateResult.substring(0, 500));
+            const match = generateResult.match(/\{.*\}/s);
+            if (match) {
+                try {
+                    scene = JSON.parse(match[0]);
+                } catch (e2) {
+                    throw new Error('无法解析返回的场景数据，原始内容：' + generateResult.substring(0, 300));
+                }
+            } else {
+                throw new Error('返回的场景数据格式不正确：' + generateResult.substring(0, 300));
+            }
+        }
+        state.scene = scene || {};
+        renderScenePreview();
+        document.getElementById('generate-loading').classList.add('hidden');
+        document.getElementById('generate-result').classList.remove('hidden');
+    } catch (err) {
+        console.error('生成失败详情:', err);
+        alert('生成失败：' + err.message);
+        goStep(2);
+    }
+}
+
+function renderScenePreview() {
+    const container = document.getElementById('scene-preview');
+    container.innerHTML = '';
+    const scene = state.scene || {};
+    const majors = (scene.majors || []).join('、') || '-';
+
+    const card = document.createElement('div');
+    card.className = 'scene-card';
+
+    let tasksHtml = '';
+    (scene.tasks || []).forEach((task, idx) => {
+        const knowledge = (task.knowledgePoints || []).join('、') || '-';
+        const abilities = (task.abilityBindings || []).map(ab => (ab.name || '') + (ab.domain ? '（' + ab.domain + '）' : '')).filter(Boolean).join('、') || '-';
+        const resources = (task.resources || []).map(r => (r.name || '') + (r.type ? '【' + r.type + '】' : '') + (r.description ? '：' + r.description : '')).join('<br>') || '-';
+
+        let standardHtml = '';
+        const std = task.evaluationStandard || {};
+        if (std.type === 'rubric' && std.rubric && std.rubric.dimensions && std.rubric.dimensions.length > 0) {
+            const levels = std.rubric.dimensions[0].levels || [];
+            standardHtml = '<div class="sub-section">📐 评价量规</div>';
+            standardHtml += '<table class="rubric-table"><thead><tr><th>维度</th>' + levels.map(l => '<th>' + (l.level || '') + '</th>').join('') + '</tr></thead><tbody>';
+            std.rubric.dimensions.forEach(dim => {
+                const dimLevels = dim.levels || [];
+                standardHtml += '<tr><td>' + (dim.name || '') + '</td>' + dimLevels.map(l => '<td>' + (l.description || '') + '</td>').join('') + '</tr>';
+            });
+            standardHtml += '</tbody></table>';
+        } else if (std.type === 'scoring' && std.scoring && std.scoring.items && std.scoring.items.length > 0) {
+            standardHtml = '<div class="sub-section">📊 评分规则</div>';
+            std.scoring.items.forEach(item => {
+                standardHtml += '<div class="sub-item">' +
+                    '<div class="sub-item-title">' + (item.name || '') + '（' + (item.score || 0) + '分）</div>' +
+                    '<div class="sub-item-desc">' + (item.criteria || '') + '</div>' +
+                    '</div>';
+            });
+        } else {
+            standardHtml = '-';
+        }
+
+        tasksHtml += '<div class="task-card">' +
+            '<div class="task-header">任务 ' + (idx + 1) + '：' + (task.name || '') + '</div>' +
+            '<table>' +
+            '<tr><th>任务简介</th><td>' + (task.description || '-') + '</td></tr>' +
+            '<tr><th>任务难度</th><td>' + (task.difficulty || '-') + '</td></tr>' +
+            '<tr><th>学时</th><td>' + (task.hours || 0) + '</td></tr>' +
+            '<tr><th>任务说明</th><td>' + (task.instructions || '-') + '</td></tr>' +
+            '<tr><th>考查知识点</th><td>' + knowledge + '</td></tr>' +
+            '<tr><th>考查能力点</th><td>' + abilities + '</td></tr>' +
+            '<tr><th>任务资源</th><td>' + resources + '</td></tr>' +
+            '<tr><th>测评形式</th><td>' + (task.evaluationForm || '-') + '</td></tr>' +
+            '<tr><th>评价标准</th><td>' + standardHtml + '</td></tr>' +
+            '</table>' +
+            '</div>';
+    });
+
+    card.innerHTML = '<div class="scene-header">' + (scene.name || '') + '</div>' +
+        '<div class="scene-info">' +
+        '<div class="scene-info-item"><label>背景简介</label>' + (scene.background || '-') + '</div>' +
+        '<div class="scene-info-item"><label>场景难度</label>' + (scene.difficulty || '-') + '</div>' +
+        '<div class="scene-info-item"><label>所属行业</label>' + (scene.industry || '-') + '</div>' +
+        '<div class="scene-info-item"><label>适用专业</label>' + majors + '</div>' +
+        '</div>' +
+        tasksHtml;
+
+    container.appendChild(card);
+}
+
+async function submitConfirm() {
+    goStep(4);
+    try {
+        const res = await fetch(API_BASE + '/api/scene_ai/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scene: state.scene })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const outputs = data.data || {};
+        const resultData = JSON.parse(outputs.confirm_result || '{}');
+        document.getElementById('final-json').textContent = JSON.stringify(resultData, null, 2);
+        document.getElementById('confirm-loading').classList.add('hidden');
+        document.getElementById('confirm-result').classList.remove('hidden');
+    } catch (err) { alert('确认失败：' + err.message); console.error(err); goStep(3); }
+}
+
+function toggleResult() {
+    const el = document.getElementById('result-collapsible');
+    el.classList.toggle('collapsed');
+}
+
+function downloadResult() {
+    const text = document.getElementById('final-json').textContent;
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const sceneName = (state.scene || {}).name || '';
+    a.href = url; a.download = '场景数据_' + sceneName + '_' + new Date().toISOString().slice(0,10) + '.json'; a.click(); URL.revokeObjectURL(url);
+}
+
+async function exportExcel() {
+    await exportTable('xlsx');
+}
+
+async function exportCSV() {
+    await exportTable('csv');
+}
+
+async function exportTable(format) {
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = '⏳ 导出中...';
+    btn.disabled = true;
+    try {
+        const res = await fetch(API_BASE + '/api/scene_ai/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scene: state.scene, format: format })
+        });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || '导出失败');
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.href = url;
+        const filename = '场景任务数据_' + ((state.scene || {}).name || '导出') + '_' + new Date().toISOString().slice(0,10) + '.' + format;
+        a.download = filename;
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    } catch (err) {
+        alert('导出失败：' + err.message);
+        console.error(err);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>

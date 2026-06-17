@@ -158,8 +158,24 @@ EOF
   pip install -q -r backend/requirements.txt
 
   # 停止旧进程（限定路径，避免误杀）
+  echo "正在停止旧服务..."
   pkill -f "gunicorn.*$REMOTE_BASE.*app:app" &>/dev/null || true
-  sleep 1
+  sleep 2
+  # 强制清理仍在占用端口 5000 的残留进程
+  for pid in $(ps aux | grep -E "gunicorn.*$REMOTE_BASE" | grep -v grep | awk '{print $2}'); do
+    kill -9 "$pid" 2>/dev/null || true
+  done
+  # 等待端口释放
+  wait_count=0
+  while ss -tlnp 2>/dev/null | grep -q ':5000' || netstat -tlnp 2>/dev/null | grep -q ':5000'; do
+    wait_count=$((wait_count + 1))
+    if [ "$wait_count" -gt 10 ]; then
+      echo "❌ 端口 5000 仍被占用，无法启动新服务"
+      exit 1
+    fi
+    echo "  等待端口 5000 释放..."
+    sleep 1
+  done
 
   # 使用 setsid 启动，确保脚本退出后服务继续运行
   setsid gunicorn -w 1 -b 0.0.0.0:5000 --timeout 300 --chdir backend app:app >> app.log 2>&1 < /dev/null &

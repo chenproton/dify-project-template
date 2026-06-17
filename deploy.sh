@@ -50,6 +50,10 @@ if [ "$DEPLOY_TARGET" == "all" ] || [ "$DEPLOY_TARGET" == "job_ai" ]; then
   cp backend/plugins/job_ai.py "$BACKEND_DIR/plugins/"
 fi
 
+if [ "$DEPLOY_TARGET" == "all" ] || [ "$DEPLOY_TARGET" == "scene_ai" ]; then
+  cp backend/plugins/scene_ai.py "$BACKEND_DIR/plugins/"
+fi
+
 cp backend/app.py "$PROJECT_DIR/app.py"
 echo "后端文件更新完成"
 
@@ -62,13 +66,32 @@ if [ "$DEPLOY_TARGET" == "all" ] || [ "$DEPLOY_TARGET" == "job_ai" ]; then
   cp frontend/plugins/job_ai.html "$FRONTEND_DIR/plugins/"
 fi
 
+if [ "$DEPLOY_TARGET" == "all" ] || [ "$DEPLOY_TARGET" == "scene_ai" ]; then
+  cp frontend/plugins/scene_ai.html "$FRONTEND_DIR/plugins/"
+fi
+
 echo "前端文件更新完成"
 
 # 重启服务
 echo ""
 echo "[3/3] 重启服务..."
 pkill -f "gunicorn.*app:app" &>/dev/null || true
-sleep 1
+sleep 2
+# 强制清理仍在占用端口 5000 的残留进程
+for pid in $(ps aux | grep -E "gunicorn.*$PROJECT_DIR" | grep -v grep | awk '{print $2}'); do
+  kill -9 "$pid" 2>/dev/null || true
+done
+# 等待端口释放
+wait_count=0
+while ss -tlnp 2>/dev/null | grep -q ':5000' || netstat -tlnp 2>/dev/null | grep -q ':5000'; do
+  wait_count=$((wait_count + 1))
+  if [ "$wait_count" -gt 10 ]; then
+    echo "❌ 端口 5000 仍被占用，无法启动新服务"
+    exit 1
+  fi
+  echo "  等待端口 5000 释放..."
+  sleep 1
+done
 
 cd "$PROJECT_DIR"
 nohup gunicorn -w 1 -b 0.0.0.0:5000 --timeout 300 app:app >> app.log 2>&1 &
