@@ -161,9 +161,12 @@ EOF
   echo "正在停止旧服务..."
   pkill -f "gunicorn.*$REMOTE_BASE.*app:app" &>/dev/null || true
   sleep 2
-  # 强制清理仍在占用端口 5000 的残留进程
-  for pid in $(ps aux | grep -E "gunicorn.*$REMOTE_BASE" | grep -v grep | awk '{print $2}'); do
-    kill -9 "$pid" 2>/dev/null || true
+  # 强制清理仍在占用端口 5000 的残留进程（包括以 python3 venv 形式启动的 gunicorn）
+  for pid in $(ps aux | grep -E "gunicorn" | grep -v grep | awk '{print $2}'); do
+    # 仅杀死工作目录或命令行包含 REMOTE_BASE 的 gunicorn 进程
+    if ps -p "$pid" -o args= 2>/dev/null | grep -qF "$REMOTE_BASE"; then
+      kill -9 "$pid" 2>/dev/null || true
+    fi
   done
   # 等待端口释放
   wait_count=0

@@ -75,11 +75,14 @@ echo "前端文件更新完成"
 # 重启服务
 echo ""
 echo "[3/3] 重启服务..."
-pkill -f "gunicorn.*app:app" &>/dev/null || true
+pkill -f "gunicorn.*$PROJECT_DIR.*app:app" &>/dev/null || true
 sleep 2
-# 强制清理仍在占用端口 5000 的残留进程
-for pid in $(ps aux | grep -E "gunicorn.*$PROJECT_DIR" | grep -v grep | awk '{print $2}'); do
-  kill -9 "$pid" 2>/dev/null || true
+# 强制清理仍在占用端口 5000 的残留进程（包括以 python3 venv 形式启动的 gunicorn）
+for pid in $(ps aux | grep -E "gunicorn" | grep -v grep | awk '{print $2}'); do
+  # 仅杀死工作目录或命令行包含 PROJECT_DIR 的 gunicorn 进程
+  if ps -p "$pid" -o args= 2>/dev/null | grep -qF "$PROJECT_DIR"; then
+    kill -9 "$pid" 2>/dev/null || true
+  fi
 done
 # 等待端口释放
 wait_count=0
