@@ -26,8 +26,11 @@ app.before_request(auth_middleware)
 app.register_blueprint(job_ai_bp)
 app.register_blueprint(scene_ai_bp)
 
-# 静态文件路径（frontend 在项目根目录，backend/app.py 在 backend 子目录）
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'frontend')
+# 静态文件路径（frontend 在项目根目录，app.py 可能在 backend/ 子目录或项目根目录）
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if os.path.basename(_BASE_DIR) == 'backend':
+    _BASE_DIR = os.path.dirname(_BASE_DIR)
+FRONTEND_DIR = os.path.join(_BASE_DIR, 'frontend')
 
 @app.route("/")
 def index():
