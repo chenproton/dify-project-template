@@ -1,0 +1,184 @@
+{
+  "id": "job_ai",
+  "description": "岗位 AI 辅助生成：根据岗位描述/人培方案文档，分析拆解细分岗位 → 生成岗位能力模型数据 → 确认导出",
+  "app": {
+    "name": "岗位AI辅助生成",
+    "description": "",
+    "icon": "🤖",
+    "icon_background": "#FFEAD5"
+  },
+  "model": {
+    "provider": "langgenius/deepseek/deepseek",
+    "name": "deepseek-v4-flash",
+    "mode": "chat",
+    "temperature": 0.7
+  },
+  "entity_label": "岗位",
+  "dependencies": [
+    {
+      "current_identifier": null,
+      "type": "marketplace",
+      "value": {
+        "marketplace_plugin_unique_identifier": "langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000",
+        "version": null
+      }
+    }
+  ],
+  "input_fields": [
+    {
+      "variable": "job_name",
+      "label": "岗位名称",
+      "type": "text-input",
+      "required": false
+    },
+    {
+      "variable": "industry",
+      "label": "所属行业",
+      "type": "text-input",
+      "required": false
+    },
+    {
+      "variable": "description",
+      "label": "岗位简介",
+      "type": "paragraph",
+      "required": false
+    },
+    {
+      "variable": "responsibilities",
+      "label": "工作职责",
+      "type": "paragraph",
+      "required": false
+    }
+  ],
+  "has_file": true,
+  "state_fields": {
+    "file_text": {
+      "label": "文件提取文本",
+      "type": "paragraph"
+    },
+    "count": {
+      "label": "确认数量",
+      "type": "text-input"
+    },
+    "suggest": {
+      "label": "选中的岗位",
+      "type": "paragraph"
+    },
+    "choose_id": {
+      "label": "选中岗位ID",
+      "type": "text-input"
+    },
+    "result_json": {
+      "label": "确认后的JSON",
+      "type": "paragraph"
+    }
+  },
+  "analyze": {
+    "system_prompt": [
+      "你是一位资深人力资源分析师。根据以下信息，建议应该拆分为多少个细分岗位。",
+      "",
+      "岗位名称：{{#start_node.job_name#}}",
+      "所属行业：{{#start_node.industry#}}",
+      "岗位简介：{{#start_node.description#}}",
+      "工作职责：{{#start_node.responsibilities#}}",
+      "文件内容：{{#doc_extractor.text#}}",
+      "",
+      "要求：",
+      "1. 分析输入内容的广度和深度，建议合理的细分岗位数量（5-10个）",
+      "2. 每个建议岗位给出简短命名和理由",
+      "3. 必须按以下 JSON 格式输出，不要包含 markdown 代码块，不要包含其他说明文字。注意：suggested_count 必须是根据内容深度合理决定的 5-10 之间的数字，不要固定输出 3：",
+      "",
+      "{\"suggested_count\":N,\"reasoning\":\"分析理由...\",\"suggested_jobs\":[{\"name\":\"XX工程师\",\"reason\":\"理由...\"}]}"
+    ],
+    "outputs": [
+      {
+        "variable": "analyze_result",
+        "from": [
+          "llm_analyze",
+          "text"
+        ]
+      },
+      {
+        "variable": "file_text",
+        "from": [
+          "doc_extractor",
+          "text"
+        ]
+      }
+    ]
+  },
+  "generate": {
+    "system_prompt": [
+      "你是一位专业的岗位建模专家。请根据以下需求，生成 {{#start_node.count#}} 个岗位的 JSON 数据。",
+      "",
+      "输入信息：",
+      "- 岗位名称：{{#start_node.job_name#}}",
+      "- 所属行业：{{#start_node.industry#}}",
+      "- 岗位简介：{{#start_node.description#}}",
+      "- 工作职责：{{#start_node.responsibilities#}}",
+      "- 文件内容（缓存）：{{#start_node.file_text#}}",
+      "- 新上传文件内容：{{#doc_extractor_generate.text#}}",
+      "- 用户选中的岗位：{{#start_node.suggest#}}",
+      "",
+      "输出要求：",
+      "1. 只输出纯 JSON 数组，不要任何 markdown 代码块（不要 ```json），不要任何解释文字",
+      "2. 每个岗位对象必须包含以下字段：",
+      "   {\"name\":\"岗位名称\",\"shortName\":\"简称\",\"industry\":\"所属行业\",\"majors\":[\"专业1\",\"专业2\"],\"salaryRange\":[5000,15000],\"coverImage\":\"\",\"description\":\"岗位描述\",\"responsibilities\":[{\"name\":\"职责1\"}],\"requirements\":[{\"name\":\"要求1\"}],\"careerPath\":{\"horizontal\":[\"横向\"],\"vertical\":[\"纵向\"]},\"certificates\":[{\"name\":\"证书\",\"description\":\"描述\"}],\"abilityBindings\":[{\"name\":\"能力点\",\"attributes\":[\"知识\"],\"domain\":\"能力域\"}],\"abilityDomains\":[{\"name\":\"能力域\"}],\"competencyConfig\":[{\"abilityName\":\"能力点\",\"level\":\"掌握L3\",\"ruleDescription\":\"标准\"}]}",
+      "3. 必须生成恰好 {{#start_node.count#}} 个岗位",
+      "4. 能力域 3-5 个，每个能力域下 10-20 个能力点",
+      "5. 薪资范围合理",
+      "6. 输出必须是可以直接解析的 JSON 数组，前后不要加任何文字",
+      "",
+      "注意：请严格按照用户选中的岗位名称和方向来生成，不要偏离用户的选择。"
+    ],
+    "code_input": "raw_json",
+    "code_input_from": [
+      "llm_generate",
+      "text"
+    ],
+    "json_key": "jobs",
+    "code": "",
+    "outputs": [
+      {
+        "variable": "generate_result",
+        "from": [
+          "code_generate",
+          "preview"
+        ]
+      },
+      {
+        "variable": "success",
+        "from": [
+          "code_generate",
+          "success"
+        ],
+        "type": "boolean"
+      }
+    ]
+  },
+  "confirm": {
+    "code_input": "arg1",
+    "code_input_from": [
+      "start_node",
+      "result_json"
+    ],
+    "json_key": "jobs",
+    "code": "",
+    "outputs": [
+      {
+        "variable": "confirm_result",
+        "from": [
+          "code_confirm",
+          "data"
+        ]
+      },
+      {
+        "variable": "status",
+        "from": [
+          "code_confirm",
+          "status"
+        ]
+      }
+    ]
+  }
+}
