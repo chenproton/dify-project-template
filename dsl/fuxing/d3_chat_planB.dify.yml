@@ -282,7 +282,7 @@ def main(raw: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: policy
           logical_operator: and
       position:
@@ -362,7 +362,7 @@ def main(level: str, query: str) -> dict:
             variable_selector:
             - code_policy_route
             - route2
-            comparison_operator: eq
+            comparison_operator: is
             value: standard
           logical_operator: and
       position:
@@ -641,7 +641,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: flight
           logical_operator: and
       position:
@@ -733,7 +733,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
             variable_selector:
             - code_flight_check
             - ask
-            comparison_operator: eq
+            comparison_operator: is
             value: 'true'
           logical_operator: and
       position:
@@ -970,7 +970,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: hotel
           logical_operator: and
       position:
@@ -1065,7 +1065,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
             variable_selector:
             - code_hotel_check
             - ask
-            comparison_operator: eq
+            comparison_operator: is
             value: 'true'
           logical_operator: and
       position:
@@ -1253,7 +1253,7 @@ def main(reply: str, hotels_body: str, city: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: trip
           logical_operator: and
       position:
@@ -1433,7 +1433,7 @@ def main(reply: str, itin_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: book
           logical_operator: and
       position:
@@ -1661,7 +1661,7 @@ def main(order_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: cancel
           logical_operator: and
       position:
@@ -1783,7 +1783,7 @@ def main(order_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: chat
           logical_operator: and
       position:
