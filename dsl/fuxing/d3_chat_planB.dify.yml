@@ -89,7 +89,7 @@ workflow:
             - combo_book(3)：机票+酒店组合 - trip_query(4)：行程查询 - policy_query(5)：差旅政策/差标/标准/报销
             - chitchat(6)：闲聊 - unknown(7)：无法识别
 
-            槽位字段（无法确定一律空字符串）： - date：优先 YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达；今天/明天/后天/大后天等相对日期可直接填入（后端自动归一化为具体日期，无需追问） - origin/destination：出发/到达城市
+            槽位字段（无法确定一律空字符串）： - date：优先 YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达；今天/明天/后天等相对日期可直接填入（后端归一化）。酒店场景：date 填入住日期，退房日期一并填入（格式 YYYY-MM-DD至YYYY-MM-DD 或 YYYY-MM-DD~YYYY-MM-DD；只给入住日期则默认住1晚） - origin/destination：出发/到达城市
             - city：酒店目的城市 - level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；仅在用户明确提及职级时填写（如"M5级别的呢""P6的标准"），当前用户职级只作上下文、不自动填入槽位
             - queryTarget：me / subordinate / leader - tripId / flightNo / hotelId
             / orderId：业务对象标识 - overBudgetReason：official（因公超标）/ personal（因私超标）
