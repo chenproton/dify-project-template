@@ -893,17 +893,21 @@ workflow:
           value_selector:
           - llm_understand
           - text
+        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text\
+          \ = (reply or \"\").strip()\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n\
+          \    if m:\n        try:\n            d = json.loads(m.group(0))\n     \
+          \       if isinstance(d, dict) and d.get(\"reply\"):\n                text\
+          \ = str(d[\"reply\"]).strip()\n        except Exception:\n            pass\n\
+          \    if not text:\n        text = \"请问还有什么可以帮您？\"\n    out = {\n       \
+          \ \"reply\": text,\n        \"intent\": \"chitchat\",\n        \"state\"\
+          : \"Idle\",\n        \"action\": \"chat\",\n        \"slots\": {},\n   \
+          \     \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"\
+          result\": json.dumps(out, ensure_ascii=False)}\n"
+        code_language: python3
         outputs:
           result:
             type: string
             children: null
-        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text\
-          \ = (reply or \"\").strip()\n    if not text:\n        text = \"请问还有什么可以帮您？\"\
-          \n    out = {\n        \"reply\": text,\n        \"intent\": \"chitchat\"\
-          ,\n        \"state\": \"Idle\",\n        \"action\": \"chat\",\n       \
-          \ \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n \
-          \   }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
       position:
         x: 1540.0
         y: 1020.0
@@ -955,6 +959,10 @@ workflow:
           value_selector:
           - code_final_chat
           - result
+        outputs:
+          result:
+            type: string
+            children: null
         code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\"\
           , \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\"\
           , \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(policy_result:\
@@ -968,10 +976,6 @@ workflow:
           : '{\"reply\":\"抱歉，我暂时无法处理这个请求。\",\"intent\":\"unknown\",\"state\":\"Idle\"\
           ,\"action\":\"chat\",\"slots\":{},\"cards\":{},\"confirm\":null}'}\n"
         code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
       position:
         x: 2400.0
         y: 900.0
