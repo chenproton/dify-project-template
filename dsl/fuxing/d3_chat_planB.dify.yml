@@ -335,7 +335,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/standards?level={{#code_policy_route.level#}}'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/standards?level={{#code_policy_route.level#}}'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -682,7 +682,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/trips?userId={{#start_node.user_id#}}&available=true'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/trips?userId={{#start_node.user_id#}}&available=true'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -723,7 +723,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/flights?origin={{#code_parse.origin#}}&destination={{#code_parse.destination#}}&date={{#code_parse.date#}}'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/flights?origin={{#code_parse.origin#}}&destination={{#code_parse.destination#}}&date={{#code_parse.date#}}'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -991,7 +991,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/hotels?city={{#code_hotel_check.city#}}&level={{#code_hotel_check.level#}}'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/hotels?city={{#code_hotel_check.city#}}&level={{#code_hotel_check.level#}}'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -1159,7 +1159,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/itineraries?userId={{#start_node.user_id#}}&targetId={{#start_node.user_id#}}'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/itineraries?userId={{#start_node.user_id#}}&targetId={{#start_node.user_id#}}'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -1410,7 +1410,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/orders?type={{#code_book_type.type#}}&userId={{#start_node.user_id#}}&tripId={{#code_book_type.tripId#}}&flightId={{#code_book_type.flightId#}}&hotelId={{#code_book_type.hotelId#}}&checkIn={{#code_book_type.checkIn#}}&checkOut={{#code_book_type.checkOut#}}&overBudgetReason={{#code_book_type.overBudgetReason#}}'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/orders?type={{#code_book_type.type#}}&userId={{#start_node.user_id#}}&tripId={{#code_book_type.tripId#}}&flightId={{#code_book_type.flightId#}}&hotelId={{#code_book_type.hotelId#}}&checkIn={{#code_book_type.checkIn#}}&checkOut={{#code_book_type.checkOut#}}&overBudgetReason={{#code_book_type.overBudgetReason#}}'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
@@ -1513,7 +1513,7 @@ workflow:
             enabled: false
             multiplier: 2
             max_interval: 10000
-        url: 'http://127.0.0.1:18084/api/v1/travel/dify-tools/orders/{{#code_parse.orderId#}}/cancel?userId={{#start_node.user_id#}}&scope=all'
+        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/orders/{{#code_parse.orderId#}}/cancel?userId={{#start_node.user_id#}}&scope=all'
         method: get
         headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
         body:
