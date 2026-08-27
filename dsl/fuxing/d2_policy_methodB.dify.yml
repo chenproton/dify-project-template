@@ -1,0 +1,294 @@
+version: 0.6.0
+kind: app
+app:
+  name: 复星差旅政策问答
+  mode: workflow
+  icon: 📖
+  icon_type: emoji
+  icon_background: '#E8F5E9'
+  description: ''
+  use_icon_as_answer_icon: false
+workflow:
+  graph:
+    nodes:
+    - id: start_node
+      type: custom
+      data:
+        type: start
+        title: 用户输入
+        desc: ''
+        selected: false
+        variables:
+        - variable: query
+          label: 用户问题
+          type: paragraph
+          required: true
+          options: []
+          value_selector: []
+      position:
+        x: 79.0
+        y: 282.0
+      positionAbsolute:
+        x: 79.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: knowledge_retrieval
+      type: custom
+      data:
+        type: knowledge-retrieval
+        title: 知识库检索
+        desc: ''
+        selected: false
+        dataset_ids:
+        - 2550b827-c7a8-47c3-9a73-5ca755925a59
+        retrieval_model: {}
+        query_variable_selector:
+        - start_node
+        - query
+        retrieval_mode: multiple
+        multiple_retrieval_config:
+          top_k: 4
+          score_threshold: null
+          reranking_mode: reranking_model
+          reranking_enable: false
+          reranking_model: null
+          weights: null
+        metadata_filtering_mode: disabled
+      position:
+        x: 380.0
+        y: 282.0
+      positionAbsolute:
+        x: 380.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_answer
+      type: custom
+      data:
+        type: llm
+        title: LLM-政策回答
+        desc: ''
+        selected: false
+        model:
+          provider: langgenius/deepseek/deepseek
+          name: deepseek-v4-flash
+          mode: chat
+          completion_params:
+            temperature: 0.1
+        prompt_template:
+        - role: system
+          text: '你是一个差旅政策问答助手。基于提供的政策文档检索片段，回答用户的差旅政策问题。
+
+
+            要求：
+
+            1. 只依据检索到的政策文档片段回答，不得编造或使用外部知识。
+
+            2. 答案中涉及差旅标准一律以金额表述（人民币元），禁止出现"星级""五星"等酒店等级描述，住宿标准一律按金额说明。
+
+            3. 回答必须输出 JSON 格式：{"answer":"回答内容","citations":[{"document":"复星集团全球差旅费报销管理规定(2026)","page":12}]}
+
+            4. citations 引用检索到的文档片段（document 为文档名称，page 为片段序号/页码，无法确定时用 0）。
+
+            5. 检索片段与问题无关或为空时，answer 返回兜底话术："抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。"，citations
+            返回 []。
+
+            6. 只输出 JSON，不要 markdown 代码块，不要任何解释文字。
+
+
+            政策文档片段：
+
+            {{#knowledge_retrieval.result#}}
+
+
+            用户问题：{{#start_node.query#}}'
+        vision:
+          enabled: false
+          configs:
+            variable_selector: []
+        context:
+          enabled: false
+          variable_selector: []
+        structured_output:
+          enabled: false
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+          exponential_backoff:
+            enabled: false
+            multiplier: 2
+            max_interval: 10000
+      position:
+        x: 700.0
+        y: 282.0
+      positionAbsolute:
+        x: 700.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_validate
+      type: custom
+      data:
+        type: code
+        title: 代码-JSON校验
+        desc: ''
+        selected: false
+        variables:
+        - variable: raw
+          label: raw
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - llm_answer
+          - text
+        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
+          \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
+          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
+          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
+          \    except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        return {\"answer\": \"抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。\"\
+          , \"citations_json\": \"[]\"}\n    ans = str(data.get(\"answer\", \"\")).strip()\n\
+          \    cites = data.get(\"citations\", [])\n    if not isinstance(cites, list):\n\
+          \        cites = []\n    cleaned_cites = []\n    for c in cites[:5]:\n \
+          \       if isinstance(c, dict):\n            cleaned_cites.append({\"document\"\
+          : c.get(\"document\", \"复星集团全球差旅费报销管理规定(2026)\"), \"page\": c.get(\"page\"\
+          , 0)})\n    if not ans:\n        ans = \"抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。\"\
+          \n    return {\"answer\": ans, \"citations_json\": json.dumps(cleaned_cites,\
+          \ ensure_ascii=False)}\n"
+        code_language: python3
+        outputs:
+          answer:
+            type: string
+            children: null
+          citations_json:
+            type: string
+            children: null
+      position:
+        x: 1020.0
+        y: 282.0
+      positionAbsolute:
+        x: 1020.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_node
+      type: custom
+      data:
+        type: end
+        title: 输出
+        desc: ''
+        selected: false
+        outputs:
+        - variable: answer
+          value_selector:
+          - code_validate
+          - answer
+          value_type: string
+        - variable: citations
+          value_selector:
+          - code_validate
+          - citations_json
+          value_type: string
+      position:
+        x: 1340.0
+        y: 282.0
+      positionAbsolute:
+        x: 1340.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
+    - id: start_node-source-knowledge_retrieval-target
+      source: start_node
+      target: knowledge_retrieval
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: start
+        targetType: knowledge-retrieval
+        isInIteration: false
+        isInLoop: false
+    - id: knowledge_retrieval-source-llm_answer-target
+      source: knowledge_retrieval
+      target: llm_answer
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: knowledge-retrieval
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: llm_answer-source-code_validate-target
+      source: llm_answer
+      target: code_validate
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_validate-source-end_node-target
+      source: code_validate
+      target: end_node
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: end
+        isInIteration: false
+        isInLoop: false
+    viewport:
+      x: 0.0
+      y: 0.0
+      zoom: 1.0
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  environment_variables: []
+  conversation_variables: []
+  rag_pipeline_variables: []
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
+    version: null

@@ -1,0 +1,261 @@
+version: 0.6.0
+kind: app
+app:
+  name: 复星差旅对话管家
+  mode: advanced-chat
+  icon: 🤖
+  icon_type: emoji
+  icon_background: '#FFF3E0'
+  description: ''
+  use_icon_as_answer_icon: false
+workflow:
+  graph:
+    nodes:
+    - id: start_node
+      type: custom
+      data:
+        type: start
+        title: 开始
+        desc: ''
+        selected: false
+        variables: []
+      position:
+        x: 79.0
+        y: 282.0
+      positionAbsolute:
+        x: 79.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_chat
+      type: custom
+      data:
+        type: llm
+        title: LLM-对话管家
+        desc: ''
+        selected: false
+        model:
+          provider: langgenius/deepseek/deepseek
+          name: deepseek-v4-flash
+          mode: chat
+          completion_params:
+            temperature: 0.4
+        prompt_template:
+        - role: system
+          text: '你是"复星差旅 AI 管家"，负责多轮对话式的差旅预订编排。
+
+
+            对话状态机（根据对话进度切换 state）：
+
+            - Idle：初始状态，等待用户提出差旅需求
+
+            - DateSelecting：询问出发日期/时间
+
+            - TripSelecting：询问出差单/行程单选择
+
+            - FlightListing：筛选航班（需要 date/origin/destination 槽位）
+
+            - HotelListing：筛选酒店（需要 city 槽位）
+
+            - OverBudgetConfirming：超标确认（费用超差标时）
+
+            - BookingConfirming：确认预订
+
+            - TripQuerying：行程查询
+
+            - CancelSelecting：取消/退改选择
+
+
+            槽位（slots）：date（YYYY-MM-DD）、origin（出发城市）、destination（到达城市）、city（酒店城市）、queryTarget（me/subordinate/leader）、tripId（出差单号）
+
+
+            行为规则：
+
+            1. 第一轮：识别用户意图（订机票/订酒店/查行程/问政策/闲聊），如槽位不全则提问补充（一次最多问2个问题）。
+
+            2. 槽位收集完成后输出 mock 航班/酒店列表（模拟数据，标注"模拟数据"）：航班含航班号/起飞到达时间/价格（经济舱价格按差标内：国内单程不超过1500元）；酒店含名称/城市/价格（一线城市每晚不超过800元，其他城市不超过600元，禁止出现星级描述，一律按金额说明）。
+
+            3. 涉及差旅政策问题（报销期限/差标/审批），简要回答政策要点并建议查阅政策问答。
+
+            4. 涉及取消/改签，引导确认操作。
+
+            5. 闲聊话题友好回应。
+
+
+            输出要求：只输出 JSON：{"state":"Idle","intent":"flight_book","slots":{},"reply":"回复用户的文本内容","flights":[],"hotels":[]}
+
+            reply 是给用户看的完整回复文本；flights/hotels 仅当对应列表生成时填充。不要 markdown 代码块。
+
+
+            当前用户输入：{{#sys.query#}}
+
+            （历史对话由记忆自动注入）'
+        vision:
+          enabled: false
+          configs:
+            variable_selector: []
+        memory:
+          enabled: true
+          window:
+            enabled: true
+            size: 12
+        context:
+          enabled: false
+          variable_selector: []
+        structured_output:
+          enabled: false
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+          exponential_backoff:
+            enabled: false
+            multiplier: 2
+            max_interval: 10000
+      position:
+        x: 400.0
+        y: 282.0
+      positionAbsolute:
+        x: 400.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_parse
+      type: custom
+      data:
+        type: code
+        title: 代码-解析
+        desc: ''
+        selected: false
+        variables:
+        - variable: raw
+          label: raw
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - llm_chat
+          - text
+        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
+          \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
+          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
+          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
+          \    except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        return {\"reply\": \"抱歉，我暂时无法处理这个请求。\", \"state_json\"\
+          : \"{}\"}\n    state = data.get(\"state\", \"Idle\")\n    intent = data.get(\"\
+          intent\", \"unknown\")\n    slots = data.get(\"slots\", {}) or {}\n    reply\
+          \ = str(data.get(\"reply\", \"\")).strip() or \"请继续描述您的需求。\"\n    flights\
+          \ = data.get(\"flights\", []) or []\n    hotels = data.get(\"hotels\", [])\
+          \ or []\n    return {\"reply\": reply, \"state_json\": json.dumps({\"state\"\
+          : state, \"intent\": intent, \"slots\": slots, \"flights\": flights[:10],\
+          \ \"hotels\": hotels[:10]}, ensure_ascii=False)}\n"
+        code_language: python3
+        outputs:
+          reply:
+            type: string
+            children: null
+          state_json:
+            type: string
+            children: null
+      position:
+        x: 720.0
+        y: 282.0
+      positionAbsolute:
+        x: 720.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: answer_node
+      type: custom
+      data:
+        type: answer
+        title: 回答
+        desc: ''
+        selected: false
+        variables: []
+        answer: '{{#code_parse.reply#}}'
+      position:
+        x: 1040.0
+        y: 282.0
+      positionAbsolute:
+        x: 1040.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
+    - id: start_node-source-llm_chat-target
+      source: start_node
+      target: llm_chat
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: start
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: llm_chat-source-code_parse-target
+      source: llm_chat
+      target: code_parse
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_parse-source-answer_node-target
+      source: code_parse
+      target: answer_node
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: answer
+        isInIteration: false
+        isInLoop: false
+    viewport:
+      x: 0.0
+      y: 0.0
+      zoom: 1.0
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  environment_variables: []
+  conversation_variables: []
+  rag_pipeline_variables: []
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
+    version: null

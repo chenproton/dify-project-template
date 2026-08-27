@@ -1,0 +1,310 @@
+version: 0.6.0
+kind: app
+app:
+  name: 复星差旅意图识别
+  mode: workflow
+  icon: 🧭
+  icon_type: emoji
+  icon_background: '#E6F4FF'
+  description: ''
+  use_icon_as_answer_icon: false
+workflow:
+  graph:
+    nodes:
+    - id: start_node
+      type: custom
+      data:
+        type: start
+        title: 用户输入
+        desc: ''
+        selected: false
+        variables:
+        - variable: query
+          label: 用户输入
+          type: paragraph
+          required: true
+          options: []
+          value_selector: []
+        - variable: role
+          label: 角色
+          type: text-input
+          required: false
+          options: []
+          value_selector: []
+        - variable: level
+          label: 级别
+          type: text-input
+          required: false
+          options: []
+          value_selector: []
+      position:
+        x: 79.0
+        y: 282.0
+      positionAbsolute:
+        x: 79.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_intent
+      type: custom
+      data:
+        type: llm
+        title: LLM-意图识别
+        desc: ''
+        selected: false
+        model:
+          provider: langgenius/deepseek/deepseek
+          name: deepseek-v4-flash
+          mode: chat
+          completion_params:
+            temperature: 0.1
+        prompt_template:
+        - role: system
+          text: '你是一个差旅智能助手的意图识别与槽位抽取引擎。分析用户输入，识别意图并抽取槽位。
+
+
+            意图枚举表（intent 与 priority 一一对应，数字越小优先级越高）：
+
+            | intent | priority | 说明 |
+
+            |--------|----------|------|
+
+            | personal_booking | 1 | 无差旅单/个人支付，如"不用出差单""个人付""仅限酒店" |
+
+            | cancel_adjust | 2 | 取消/调整，如"取消""退订""改签""调整行程" |
+
+            | flight_book | 3 | 机票预订，如"机票""航班""订票""飞XX" |
+
+            | hotel_book | 3 | 酒店预订，如"酒店""订房""住酒店" |
+
+            | combo_book | 3 | 机票+酒店组合，如"机票+酒店""同时""组合" |
+
+            | trip_query | 4 | 行程查询，如"我的行程""查行程""领导行程" |
+
+            | policy_query | 5 | 差旅政策，如"差标""政策""标准""报销" |
+
+            | chitchat | 6 | 闲聊，如"天气""美食""景点" |
+
+            | unknown | 7 | 无法识别 |
+
+
+            槽位规则：
+
+            - date：ISO 8601（YYYY-MM-DD）。支持"8月20日""8.20""8/20""八月二十号"等中文/数字表达，未指明年份默认当前年份。解析失败留空字符串。
+
+            - origin：出发城市。支持"A→B""A到B""A飞B"等表达。
+
+            - destination：到达城市。
+
+            - city：酒店预订场景的目的城市（不传 origin/destination 时）。
+
+            - queryTarget：me / subordinate / leader（仅行程查询场景）。"我的""我"→me；"下属"→subordinate；"领导"→leader。
+
+
+            优先级冲突处理：若用户输入包含多个意图表达，取 priority 数值最小的意图。例如"不用出差单，帮我订酒店"→ personal_booking(1)
+            而非 hotel_book(3)。
+
+
+            输出要求：只输出 JSON，格式如下，不要 markdown 代码块，不要任何解释文字：
+
+            {"intent":"flight_book","priority":3,"slots":{"date":"2026-08-20","origin":"上海","destination":"北京","city":"","queryTarget":""}}
+
+            intent 必须来自枚举表，无法确定时用 unknown；slots 中无法确定的字段一律空字符串。
+
+
+            用户输入：{{#start_node.query#}}
+
+            用户角色：{{#start_node.role#}}
+
+            用户级别：{{#start_node.level#}}'
+        vision:
+          enabled: false
+          configs:
+            variable_selector: []
+        context:
+          enabled: false
+          variable_selector: []
+        structured_output:
+          enabled: false
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+          exponential_backoff:
+            enabled: false
+            multiplier: 2
+            max_interval: 10000
+      position:
+        x: 400.0
+        y: 282.0
+      positionAbsolute:
+        x: 400.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_validate
+      type: custom
+      data:
+        type: code
+        title: 代码-JSON校验
+        desc: ''
+        selected: false
+        variables:
+        - variable: raw
+          label: raw
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - llm_intent
+          - text
+        code: "import json\nimport re\n\nVALID_INTENTS = {\n    \"personal_booking\"\
+          : 1, \"cancel_adjust\": 2, \"flight_book\": 3, \"hotel_book\": 3,\n    \"\
+          combo_book\": 3, \"trip_query\": 4, \"policy_query\": 5, \"chitchat\": 6,\
+          \ \"unknown\": 7,\n}\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
+          \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
+          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
+          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
+          \    except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        return {\"intent\": \"unknown\", \"priority\": 7, \"slots_json\"\
+          : \"{}\", \"raw\": raw[:500]}\n    intent = data.get(\"intent\", \"unknown\"\
+          )\n    if intent not in VALID_INTENTS:\n        intent = \"unknown\"\n \
+          \   slots = data.get(\"slots\", {})\n    if not isinstance(slots, dict):\n\
+          \        slots = {}\n    cleaned = {\n        \"date\": slots.get(\"date\"\
+          , \"\") or \"\",\n        \"origin\": slots.get(\"origin\", \"\") or \"\"\
+          ,\n        \"destination\": slots.get(\"destination\", \"\") or \"\",\n\
+          \        \"city\": slots.get(\"city\", \"\") or \"\",\n        \"queryTarget\"\
+          : slots.get(\"queryTarget\", \"\") or \"\",\n    }\n    return {\n     \
+          \   \"intent\": intent,\n        \"priority\": VALID_INTENTS[intent],\n\
+          \        \"slots_json\": json.dumps(cleaned, ensure_ascii=False),\n    \
+          \    \"raw\": text[:500],\n    }\n"
+        code_language: python3
+        outputs:
+          intent:
+            type: string
+            children: null
+          priority:
+            type: number
+            children: null
+          slots_json:
+            type: string
+            children: null
+          raw:
+            type: string
+            children: null
+      position:
+        x: 720.0
+        y: 282.0
+      positionAbsolute:
+        x: 720.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: end_node
+      type: custom
+      data:
+        type: end
+        title: 输出
+        desc: ''
+        selected: false
+        outputs:
+        - variable: intent
+          value_selector:
+          - code_validate
+          - intent
+          value_type: string
+        - variable: priority
+          value_selector:
+          - code_validate
+          - priority
+          value_type: number
+        - variable: slots
+          value_selector:
+          - code_validate
+          - slots_json
+          value_type: string
+      position:
+        x: 1040.0
+        y: 282.0
+      positionAbsolute:
+        x: 1040.0
+        y: 282.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
+    - id: start_node-source-llm_intent-target
+      source: start_node
+      target: llm_intent
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: start
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: llm_intent-source-code_validate-target
+      source: llm_intent
+      target: code_validate
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_validate-source-end_node-target
+      source: code_validate
+      target: end_node
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: end
+        isInIteration: false
+        isInLoop: false
+    viewport:
+      x: 0.0
+      y: 0.0
+      zoom: 1.0
+  features:
+    file_upload:
+      enabled: false
+    opening_statement: ''
+    retriever_resource:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions: []
+    suggested_questions_after_answer:
+      enabled: false
+    text_to_speech:
+      enabled: false
+  environment_variables: []
+  conversation_variables: []
+  rag_pipeline_variables: []
+dependencies:
+- current_identifier: null
+  type: marketplace
+  value:
+    marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
+    version: null
