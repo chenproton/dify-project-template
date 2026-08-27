@@ -6,7 +6,7 @@ app:
   icon: 🤖
   icon_type: emoji
   icon_background: '#FFF3E0'
-  description: '方案B：对话后移——NLU/多轮编排/知识库RAG/工具调度（Dify 编排，后端工具接口取数）'
+  description: 方案B：对话后移——NLU/多轮编排/知识库RAG/工具调度（Dify 编排，后端工具接口取数）
   use_icon_as_answer_icon: false
 workflow:
   graph:
@@ -43,6 +43,12 @@ workflow:
           required: false
           options: []
           value_selector: []
+        - variable: tool_data
+          label: 系统数据
+          type: text-input
+          required: false
+          options: []
+          value_selector: []
       position:
         x: 79.0
         y: 282.0
@@ -69,39 +75,29 @@ workflow:
             temperature: 0.2
         prompt_template:
         - role: system
-          text: '你是复星差旅 AI 管家，负责差旅对话的意图识别与槽位抽取。必须结合历史对话理解省略句、指代与追问（例如用户先问"差旅政策"，再追问"M5级别的呢"，应识别为 policy_query 且 level=M5）。
+          text: '你是复星差旅 AI 管家，负责差旅对话的意图识别与槽位抽取。必须结合历史对话理解省略句、指代与追问（例如用户先问"差旅政策"，再追问"M5级别的呢"，应识别为
+            policy_query 且 level=M5）。
 
-意图枚举（priority 数字越小优先级越高）：
-- personal_booking(1)：无差旅单/个人支付，如"不用出差单""个人付"
-- cancel_adjust(2)：取消/调整，如"取消""退订""改签"
-- flight_book(3)：机票预订
-- hotel_book(3)：酒店预订
-- combo_book(3)：机票+酒店组合
-- trip_query(4)：行程查询
-- policy_query(5)：差旅政策/差标/标准/报销
-- chitchat(6)：闲聊
-- unknown(7)：无法识别
+            意图枚举（priority 数字越小优先级越高）： - personal_booking(1)：无差旅单/个人支付，如"不用出差单""个人付"
+            - cancel_adjust(2)：取消/调整，如"取消""退订""改签" - flight_book(3)：机票预订 - hotel_book(3)：酒店预订
+            - combo_book(3)：机票+酒店组合 - trip_query(4)：行程查询 - policy_query(5)：差旅政策/差标/标准/报销
+            - chitchat(6)：闲聊 - unknown(7)：无法识别
 
-槽位字段（无法确定一律空字符串）：
-- date：YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达
-- origin/destination：出发/到达城市
-- city：酒店目的城市
-- level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；仅在用户明确提及职级时填写（如"M5级别的呢""P6的标准"），当前用户职级只作上下文、不自动填入槽位
-- queryTarget：me / subordinate / leader
-- tripId / flightNo / hotelId / orderId：业务对象标识
-- overBudgetReason：official（因公超标）/ personal（因私超标）
+            槽位字段（无法确定一律空字符串）： - date：YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达 - origin/destination：出发/到达城市
+            - city：酒店目的城市 - level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；仅在用户明确提及职级时填写（如"M5级别的呢""P6的标准"），当前用户职级只作上下文、不自动填入槽位
+            - queryTarget：me / subordinate / leader - tripId / flightNo / hotelId
+            / orderId：业务对象标识 - overBudgetReason：official（因公超标）/ personal（因私超标）
 
-行为规则：
-1. 用户确认选择（"选1号航班""就选第一个""确认预订""确认支付"）时，结合最近展示的航班/酒店/订单，把所选对象填入对应槽位（flightNo/hotelId/orderId），intent 用当前预订意图。
-2. 回答超标确认（"因公""因私""A"）时填 overBudgetReason。
-3. 缺失关键信息（订票缺日期/路线，订酒店缺城市）时 need_ask=true，并在 reply 中给出追问。
-4. 秘书代订场景：用户在预订流程中说"帮领导订"等，填 queryTarget=leader。
-5. 只输出 JSON，不要 markdown 代码块：{"intent":"...","slots":{...},"reply":"...","need_ask":true/false}
-6. reply 仅在纯对话/追问/闲聊场景给出（工具取数场景留空）。
+            行为规则： 1. 用户确认选择（"选1号航班""就选第一个""确认预订""确认支付"）时，结合最近展示的航班/酒店/订单，把所选对象填入对应槽位（flightNo/hotelId/orderId），intent
+            用当前预订意图。 2. 回答超标确认（"因公""因私""A"）时填 overBudgetReason。 3. 缺失关键信息（订票缺日期/路线，订酒店缺城市）时
+            need_ask=true，并在 reply 中给出追问。 4. 秘书代订场景：用户在预订流程中说"帮领导订"等，填 queryTarget=leader。
+            5. 只输出 JSON，不要 markdown 代码块：{"intent":"...","slots":{...},"reply":"...","need_ask":true/false}
+            6. reply 仅在纯对话/追问/闲聊场景给出（工具取数场景留空）。
 
-当前用户：{{#start_node.user_name#}}（职级 {{#start_node.level#}}，角色 {{#start_node.role#}}）
-用户输入：{{#sys.query#}}
-（历史对话由记忆自动注入，务必结合上下文理解本次输入）'
+            当前用户：{{#start_node.user_name#}}（职级 {{#start_node.level#}}，角色 {{#start_node.role#}}）
+            用户输入：{{#sys.query#}} （历史对话由记忆自动注入，务必结合上下文理解本次输入）\n\n系统数据（后端工具取数后注入，可能为空）：\n{{#start_node.tool_data#}}\n\n规则：若系统数据非空，则基于其中的航班/酒店/差标/行程/订单/取消结果数据生成最终回复与推荐（列表用数字编号），intent
+            保持当前预订意图，reply 填充完整回复文本，need_ask=false；若系统数据为空且是取数场景，need_ask=false、reply
+            留空，由后端取数后重新调用。'
         vision:
           enabled: false
           configs:
@@ -151,23 +147,67 @@ workflow:
           value_selector:
           - llm_understand
           - text
-        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = (raw or \"\").strip()\n    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n    if m:\n        try:\n            data = json.loads(m.group(0))\n        except Exception:\n            data = None\n    if not isinstance(data, dict):\n        data = {}\n    intent = str(data.get(\"intent\", \"unknown\") or \"unknown\")\n    slots = data.get(\"slots\", {}) or {}\n    if not isinstance(slots, dict):\n        slots = {}\n    def g(k):\n        v = slots.get(k, \"\")\n        return str(v).strip() if v else \"\"\n    return {\n        \"intent\": intent,\n        \"date\": g(\"date\"), \"origin\": g(\"origin\"), \"destination\": g(\"destination\"),\n        \"city\": g(\"city\"), \"level\": g(\"level\"), \"queryTarget\": g(\"queryTarget\"),\n        \"tripId\": g(\"tripId\"), \"flightNo\": g(\"flightNo\"), \"hotelId\": g(\"hotelId\"),\n        \"orderId\": g(\"orderId\"), \"overBudgetReason\": g(\"overBudgetReason\"),\n        \"reply\": str(data.get(\"reply\", \"\") or \"\").strip(),\n        \"need_ask\": bool(data.get(\"need_ask\", False)),\n    }"
-        code_language: python3
         outputs:
-          intent: {type: string, children: null}
-          date: {type: string, children: null}
-          origin: {type: string, children: null}
-          destination: {type: string, children: null}
-          city: {type: string, children: null}
-          level: {type: string, children: null}
-          queryTarget: {type: string, children: null}
-          tripId: {type: string, children: null}
-          flightNo: {type: string, children: null}
-          hotelId: {type: string, children: null}
-          orderId: {type: string, children: null}
-          overBudgetReason: {type: string, children: null}
-          reply: {type: string, children: null}
-          need_ask: {type: boolean, children: null}
+          intent:
+            type: string
+            children: null
+          date:
+            type: string
+            children: null
+          origin:
+            type: string
+            children: null
+          destination:
+            type: string
+            children: null
+          city:
+            type: string
+            children: null
+          level:
+            type: string
+            children: null
+          queryTarget:
+            type: string
+            children: null
+          tripId:
+            type: string
+            children: null
+          flightNo:
+            type: string
+            children: null
+          hotelId:
+            type: string
+            children: null
+          orderId:
+            type: string
+            children: null
+          overBudgetReason:
+            type: string
+            children: null
+          reply:
+            type: string
+            children: null
+          need_ask:
+            type: boolean
+            children: null
+        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = (raw or\
+          \ \"\").strip()\n    text = re.sub(r\"<think>.*?</think>\", \"\", text,\
+          \ flags=re.DOTALL)\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n\
+          \    data = None\n    if m:\n        try:\n            data = json.loads(m.group(0))\n\
+          \        except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        data = {}\n    intent = str(data.get(\"intent\", \"unknown\"\
+          ) or \"unknown\")\n    slots = data.get(\"slots\", {}) or {}\n    if not\
+          \ isinstance(slots, dict):\n        slots = {}\n    def g(k):\n        v\
+          \ = slots.get(k, \"\")\n        return str(v).strip() if v else \"\"\n \
+          \   return {\n        \"intent\": intent,\n        \"date\": g(\"date\"\
+          ), \"origin\": g(\"origin\"), \"destination\": g(\"destination\"),\n   \
+          \     \"city\": g(\"city\"), \"level\": g(\"level\"), \"queryTarget\": g(\"\
+          queryTarget\"),\n        \"tripId\": g(\"tripId\"), \"flightNo\": g(\"flightNo\"\
+          ), \"hotelId\": g(\"hotelId\"),\n        \"orderId\": g(\"orderId\"), \"\
+          overBudgetReason\": g(\"overBudgetReason\"),\n        \"reply\": str(data.get(\"\
+          reply\", \"\") or \"\").strip(),\n        \"need_ask\": bool(data.get(\"\
+          need_ask\", False)),\n    }"
+        code_language: python3
       position:
         x: 680.0
         y: 282.0
@@ -203,10 +243,21 @@ workflow:
           value_selector:
           - code_parse
           - orderId
-        code: "def main(intent: str, orderId: str) -> dict:\n    intent = (intent or \"unknown\").strip()\n    if intent in (\"flight_book\", \"combo_book\"):\n        route = \"flight\"\n    elif intent == \"hotel_book\":\n        route = \"hotel\"\n    elif intent == \"trip_query\":\n        route = \"trip\"\n    elif intent == \"cancel_adjust\":\n        route = \"cancel\" if (orderId or \"\").strip() else \"trip\"\n    elif intent == \"policy_query\":\n        route = \"policy\"\n    elif intent in (\"booking_confirm\", \"confirm_pay\"):\n        route = \"book\"\n    elif intent == \"personal_booking\":\n        route = \"hotel\"\n    else:\n        route = \"chat\"\n    return {\"route\": route}"
-        code_language: python3
         outputs:
-          route: {type: string, children: null}
+          route:
+            type: string
+            children: null
+        code: "def main(intent: str, orderId: str) -> dict:\n    intent = (intent\
+          \ or \"unknown\").strip()\n    if intent in (\"flight_book\", \"combo_book\"\
+          ):\n        route = \"flight\"\n    elif intent == \"hotel_book\":\n   \
+          \     route = \"hotel\"\n    elif intent == \"trip_query\":\n        route\
+          \ = \"trip\"\n    elif intent == \"cancel_adjust\":\n        route = \"\
+          cancel\" if (orderId or \"\").strip() else \"trip\"\n    elif intent ==\
+          \ \"policy_query\":\n        route = \"policy\"\n    elif intent in (\"\
+          booking_confirm\", \"confirm_pay\"):\n        route = \"book\"\n    elif\
+          \ intent == \"personal_booking\":\n        route = \"hotel\"\n    else:\n\
+          \        route = \"chat\"\n    return {\"route\": route}"
+        code_language: python3
       position:
         x: 980.0
         y: 282.0
@@ -230,11 +281,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_policy
+            comparison_operator: is
+            value: policy
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: policy
           logical_operator: and
       position:
         x: 1260.0
@@ -271,8 +323,6 @@ workflow:
           value_selector:
           - sys
           - query
-        code: "import json, re\n\ndef main(level: str, query: str) -> dict:\n    m = re.search(r\"(M|P|I)\\d+\", (level or \"\") + \" \" + (query or \"\"))\n    if m:\n        return {\"level\": m.group(0), \"route2\": \"standard\"}\n    return {\"level\": \"\", \"route2\": \"rag\"}"
-        code_language: python3
         outputs:
           level:
             type: string
@@ -280,6 +330,11 @@ workflow:
           route2:
             type: string
             children: null
+        code: "import json, re\n\ndef main(level: str, query: str) -> dict:\n    m\
+          \ = re.search(r\"(M|P|I)\\d+\", (level or \"\") + \" \" + (query or \"\"\
+          ))\n    if m:\n        return {\"level\": m.group(0), \"route2\": \"standard\"\
+          }\n    return {\"level\": \"\", \"route2\": \"rag\"}"
+        code_language: python3
       position:
         x: 1540.0
         y: 60.0
@@ -303,11 +358,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_policy_std
+            comparison_operator: is
+            value: standard
+            varType: string
             variable_selector:
             - code_policy_route
             - route2
-            comparison_operator: is
-            value: standard
           logical_operator: and
       position:
         x: 1820.0
@@ -315,96 +371,6 @@ workflow:
       positionAbsolute:
         x: 1820.0
         y: 60.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_standards
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-差标
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/standards?level={{#code_policy_route.level#}}'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 2100.0
-        y: 20.0
-      positionAbsolute:
-        x: 2100.0
-        y: 20.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: llm_policy_std
-      type: custom
-      data:
-        type: llm
-        title: LLM-差标回答
-        desc: ''
-        selected: false
-        model:
-          provider: langgenius/deepseek/deepseek
-          name: deepseek-v4-flash
-          mode: chat
-          completion_params:
-            temperature: 0.2
-        prompt_template:
-        - role: system
-          text: '你是差旅政策助手。用户查询职级 {{#code_policy_route.level#}} 的差旅标准，请基于系统返回的差标数据，用简洁中文回复金额化标准（酒店上限按城市分档、机票舱位、火车席别）。禁止出现星级/五星描述。只输出回答文本，不要 JSON。系统数据：{{#http_standards.body#}}'
-        vision:
-          enabled: false
-          configs:
-            variable_selector: []
-        context:
-          enabled: false
-          variable_selector: []
-        structured_output:
-          enabled: false
-        memory:
-          enabled: true
-          window:
-            enabled: true
-            size: 12
-        retry_config:
-          enabled: false
-          max_retries: 1
-          retry_interval: 1000
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-      position:
-        x: 2380.0
-        y: 20.0
-      positionAbsolute:
-        x: 2380.0
-        y: 20.0
       width: 244
       height: 90
       selected: false
@@ -458,21 +424,23 @@ workflow:
             temperature: 0.2
         prompt_template:
         - role: system
-          text: '你是差旅政策问答助手。基于检索到的政策片段回答用户问题。要求：1. 只依据检索片段回答，不得编造；2. 差标一律金额化表述，禁止出现星级/五星；3. 若检索片段与问题无关，回复：抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅相关规定。检索片段：{{#kbr.result#}}。用户问题：{{#sys.query#}}。只输出回答文本，不要 JSON。'
+          text: 你是差旅政策问答助手。基于检索到的政策片段回答用户问题。要求：1. 只依据检索片段回答，不得编造；2. 差标一律金额化表述，禁止出现星级/五星；3.
+            若检索片段与问题无关，回复：抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅相关规定。检索片段：{{#kbr.result#}}。用户问题：{{#sys.query#}}。只输出回答文本，不要
+            JSON。
         vision:
           enabled: false
           configs:
             variable_selector: []
-        context:
-          enabled: false
-          variable_selector: []
-        structured_output:
-          enabled: false
         memory:
           enabled: true
           window:
             enabled: true
             size: 12
+        context:
+          enabled: false
+          variable_selector: []
+        structured_output:
+          enabled: false
         retry_config:
           enabled: false
           max_retries: 1
@@ -500,14 +468,6 @@ workflow:
         desc: ''
         selected: false
         variables:
-        - variable: reply_std
-          label: reply_std
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - llm_policy_std
-          - text
         - variable: reply_rag
           label: reply_rag
           type: text-input
@@ -516,23 +476,12 @@ workflow:
           value_selector:
           - llm_policy_ans
           - text
-        - variable: standards_body
-          label: standards_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_standards
-          - body
-        - variable: level
-          label: level
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_policy_route
-          - level
-        code: "import json\n\ndef main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dict:\n    reply = (reply_std or \"\").strip() or (reply_rag or \"\").strip() or \"已为您查询差旅标准。\"\n    cards = {}\n    try:\n        data = json.loads(standards_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"standards\"):\n            cards[\"standards\"] = data[\"standards\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": reply,\n        \"intent\": \"policy_query\",\n        \"state\": \"PolicyQA\",\n        \"action\": \"show_standards\" if cards else \"policy_answer\",\n        \"slots\": {\"level\": level or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
+        code: "import json, re\n\ndef main(reply_rag: str) -> dict:\n    reply = (reply_rag\
+          \ or \"\").strip() or \"已为您查询相关政策。\"\n    out = {\n        \"reply\": reply,\n\
+          \        \"intent\": \"policy_query\",\n        \"state\": \"PolicyQA\"\
+          ,\n        \"action\": \"policy_answer\",\n        \"slots\": {},\n    \
+          \    \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\"\
+          : json.dumps(out, ensure_ascii=False)}\n"
         code_language: python3
         outputs:
           result:
@@ -561,11 +510,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_flight
+            comparison_operator: is
+            value: flight
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: flight
           logical_operator: and
       position:
         x: 1260.0
@@ -618,8 +568,6 @@ workflow:
           value_selector:
           - code_parse
           - need_ask
-        code: "def main(date: str, origin: str, destination: str, need_ask: str) -> dict:\n    need_data = bool(date and origin and destination)\n    return {\"need_data\": need_data, \"ask\": (need_ask or \"\").lower() == \"true\" and not need_data}"
-        code_language: python3
         outputs:
           need_data:
             type: boolean
@@ -627,6 +575,11 @@ workflow:
           ask:
             type: boolean
             children: null
+        code: "def main(date: str, origin: str, destination: str, need_ask: str) ->\
+          \ dict:\n    need_data = bool(date and origin and destination)\n    return\
+          \ {\"need_data\": need_data, \"ask\": (need_ask or \"\").lower() == \"true\"\
+          \ and not need_data}"
+        code_language: python3
       position:
         x: 1540.0
         y: 220.0
@@ -650,11 +603,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_flight_ask
+            comparison_operator: is
+            value: 'true'
+            varType: string
             variable_selector:
             - code_flight_check
             - ask
-            comparison_operator: is
-            value: 'true'
           logical_operator: and
       position:
         x: 1820.0
@@ -662,194 +616,6 @@ workflow:
       positionAbsolute:
         x: 1820.0
         y: 220.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_trips
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-出差单
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/trips?userId={{#start_node.user_id#}}&available=true'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 2100.0
-        y: 200.0
-      positionAbsolute:
-        x: 2100.0
-        y: 200.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_flights
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-航班
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/flights?origin={{#code_parse.origin#}}&destination={{#code_parse.destination#}}&date={{#code_parse.date#}}'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 2100.0
-        y: 300.0
-      positionAbsolute:
-        x: 2100.0
-        y: 300.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: llm_recommend_flights
-      type: custom
-      data:
-        type: llm
-        title: LLM-航班推荐
-        desc: ''
-        selected: false
-        model:
-          provider: langgenius/deepseek/deepseek
-          name: deepseek-v4-flash
-          mode: chat
-          completion_params:
-            temperature: 0.2
-        prompt_template:
-        - role: system
-          text: '你是差旅机票助手。基于系统返回的航班数据，为用户推荐符合差旅标准的航班（用户职级 {{#start_node.level#}}，国内单程超1500元需审批）。要求：1. 回复文本按时间从早到晚列出航班（航班号/起降时间/舱位/价格），最多5条，用数字编号；2. 若航班数据为空，回复暂时没有符合的航班；3. 只输出回答文本，不要 JSON。航班数据：{{#http_flights.body#}}。出差单：{{#http_trips.body#}}'
-        vision:
-          enabled: false
-          configs:
-            variable_selector: []
-        context:
-          enabled: false
-          variable_selector: []
-        structured_output:
-          enabled: false
-        memory:
-          enabled: true
-          window:
-            enabled: true
-            size: 12
-        retry_config:
-          enabled: false
-          max_retries: 1
-          retry_interval: 1000
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-      position:
-        x: 2380.0
-        y: 300.0
-      positionAbsolute:
-        x: 2380.0
-        y: 300.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_final_flights
-      type: custom
-      data:
-        type: code
-        title: 代码-航班输出
-        desc: ''
-        selected: false
-        variables:
-        - variable: reply
-          label: reply
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - llm_recommend_flights
-          - text
-        - variable: flights_body
-          label: flights_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_flights
-          - body
-        - variable: origin
-          label: origin
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - origin
-        - variable: destination
-          label: destination
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - destination
-        code: "import json\n\ndef main(reply: str, flights_body: str, origin: str, destination: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(flights_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"flights\"):\n            cards[\"flights\"] = data[\"flights\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询航班。\",\n        \"intent\": \"flight_book\",\n        \"state\": \"FlightListing\",\n        \"action\": \"show_flights\" if cards else \"no_flights\",\n        \"slots\": {\"origin\": origin or \"\", \"destination\": destination or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
-      position:
-        x: 2660.0
-        y: 300.0
-      positionAbsolute:
-        x: 2660.0
-        y: 300.0
       width: 244
       height: 90
       selected: false
@@ -867,11 +633,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_hotel
+            comparison_operator: is
+            value: hotel
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: hotel
           logical_operator: and
       position:
         x: 1260.0
@@ -924,8 +691,6 @@ workflow:
           value_selector:
           - start_node
           - level
-        code: "def main(city: str, destination: str, need_ask: str, level: str) -> dict:\n    c = (city or \"\").strip() or (destination or \"\").strip()\n    return {\"city\": c, \"level\": (level or \"\").strip(), \"ask\": bool(c) is False and (need_ask or \"\").lower() == \"true\"}"
-        code_language: python3
         outputs:
           city:
             type: string
@@ -936,6 +701,11 @@ workflow:
           ask:
             type: boolean
             children: null
+        code: "def main(city: str, destination: str, need_ask: str, level: str) ->\
+          \ dict:\n    c = (city or \"\").strip() or (destination or \"\").strip()\n\
+          \    return {\"city\": c, \"level\": (level or \"\").strip(), \"ask\": bool(c)\
+          \ is False and (need_ask or \"\").lower() == \"true\"}"
+        code_language: python3
       position:
         x: 1540.0
         y: 380.0
@@ -959,11 +729,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_hotel_ask
+            comparison_operator: is
+            value: 'true'
+            varType: string
             variable_selector:
             - code_hotel_check
             - ask
-            comparison_operator: is
-            value: 'true'
           logical_operator: and
       position:
         x: 1820.0
@@ -971,145 +742,6 @@ workflow:
       positionAbsolute:
         x: 1820.0
         y: 380.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_hotels
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-酒店
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/hotels?city={{#code_hotel_check.city#}}&level={{#code_hotel_check.level#}}'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 2100.0
-        y: 460.0
-      positionAbsolute:
-        x: 2100.0
-        y: 460.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: llm_recommend_hotels
-      type: custom
-      data:
-        type: llm
-        title: LLM-酒店推荐
-        desc: ''
-        selected: false
-        model:
-          provider: langgenius/deepseek/deepseek
-          name: deepseek-v4-flash
-          mode: chat
-          completion_params:
-            temperature: 0.2
-        prompt_template:
-        - role: system
-          text: '你是差旅酒店助手。基于系统返回的酒店数据（含超标标记），为用户推荐酒店（用户职级 {{#code_hotel_check.level#}}）。要求：1. 回复文本列出酒店（名称/房型/评分/每晚价格/是否超标），最多3条，用数字编号；2. 超标酒店需明确提示超出差标金额；3. 只输出回答文本，不要 JSON。酒店数据：{{#http_hotels.body#}}'
-        vision:
-          enabled: false
-          configs:
-            variable_selector: []
-        context:
-          enabled: false
-          variable_selector: []
-        structured_output:
-          enabled: false
-        memory:
-          enabled: true
-          window:
-            enabled: true
-            size: 12
-        retry_config:
-          enabled: false
-          max_retries: 1
-          retry_interval: 1000
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-      position:
-        x: 2380.0
-        y: 460.0
-      positionAbsolute:
-        x: 2380.0
-        y: 460.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_final_hotels
-      type: custom
-      data:
-        type: code
-        title: 代码-酒店输出
-        desc: ''
-        selected: false
-        variables:
-        - variable: reply
-          label: reply
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - llm_recommend_hotels
-          - text
-        - variable: hotels_body
-          label: hotels_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_hotels
-          - body
-        - variable: city
-          label: city
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_hotel_check
-          - city
-        code: "import json\n\ndef main(reply: str, hotels_body: str, city: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(hotels_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"hotels\"):\n            cards[\"hotels\"] = data[\"hotels\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询酒店。\",\n        \"intent\": \"hotel_book\",\n        \"state\": \"HotelListing\",\n        \"action\": \"show_hotels\" if cards else \"no_hotels\",\n        \"slots\": {\"city\": city or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
-      position:
-        x: 2660.0
-        y: 460.0
-      positionAbsolute:
-        x: 2660.0
-        y: 460.0
       width: 244
       height: 90
       selected: false
@@ -1127,148 +759,18 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_trip
+            comparison_operator: is
+            value: trip
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: trip
           logical_operator: and
       position:
         x: 1260.0
         y: 540.0
       positionAbsolute:
         x: 1260.0
-        y: 540.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_itineraries
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-行程
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/itineraries?userId={{#start_node.user_id#}}&targetId={{#start_node.user_id#}}'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 1540.0
-        y: 540.0
-      positionAbsolute:
-        x: 1540.0
-        y: 540.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: llm_summarize_trip
-      type: custom
-      data:
-        type: llm
-        title: LLM-行程汇总
-        desc: ''
-        selected: false
-        model:
-          provider: langgenius/deepseek/deepseek
-          name: deepseek-v4-flash
-          mode: chat
-          completion_params:
-            temperature: 0.2
-        prompt_template:
-        - role: system
-          text: '你是差旅行程助手。基于系统返回的行程数据，为用户简要汇总待出行与历史行程（类型/路线/日期/金额/状态/姓名）。若数据为空，回复暂无行程记录。只输出回答文本，不要 JSON。行程数据：{{#http_itineraries.body#}}'
-        vision:
-          enabled: false
-          configs:
-            variable_selector: []
-        context:
-          enabled: false
-          variable_selector: []
-        structured_output:
-          enabled: false
-        memory:
-          enabled: true
-          window:
-            enabled: true
-            size: 12
-        retry_config:
-          enabled: false
-          max_retries: 1
-          retry_interval: 1000
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-      position:
-        x: 1820.0
-        y: 540.0
-      positionAbsolute:
-        x: 1820.0
-        y: 540.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_final_trip
-      type: custom
-      data:
-        type: code
-        title: 代码-行程输出
-        desc: ''
-        selected: false
-        variables:
-        - variable: reply
-          label: reply
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - llm_summarize_trip
-          - text
-        - variable: itin_body
-          label: itin_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_itineraries
-          - body
-        code: "import json\n\ndef main(reply: str, itin_body: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(itin_body or \"{}\")\n        if isinstance(data, dict) and (data.get(\"upcoming\") or data.get(\"history\")):\n            cards[\"itineraries\"] = data\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询行程。\",\n        \"intent\": \"trip_query\",\n        \"state\": \"TripQuerying\",\n        \"action\": \"show_itineraries\" if cards else \"no_itineraries\",\n        \"slots\": {},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
-      position:
-        x: 2100.0
-        y: 540.0
-      positionAbsolute:
-        x: 2100.0
         y: 540.0
       width: 244
       height: 90
@@ -1287,182 +789,18 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_book
+            comparison_operator: is
+            value: book
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: book
           logical_operator: and
       position:
         x: 1260.0
         y: 700.0
       positionAbsolute:
         x: 1260.0
-        y: 700.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_book_type
-      type: custom
-      data:
-        type: code
-        title: 代码-订单类型
-        desc: ''
-        selected: false
-        variables:
-        - variable: flightNo
-          label: flightNo
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - flightNo
-        - variable: hotelId
-          label: hotelId
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - hotelId
-        - variable: tripId
-          label: tripId
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - tripId
-        - variable: checkIn
-          label: checkIn
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - date
-        - variable: checkOut
-          label: checkOut
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - date
-        - variable: overBudgetReason
-          label: overBudgetReason
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - overBudgetReason
-        code: "def main(flightNo: str, hotelId: str, tripId: str, checkIn: str, checkOut: str, overBudgetReason: str) -> dict:\n    f = (flightNo or \"\").strip()\n    h = (hotelId or \"\").strip()\n    if f and h:\n        t = \"combo\"\n    elif f:\n        t = \"flight\"\n    else:\n        t = \"hotel\"\n    return {\"type\": t, \"flightId\": f, \"hotelId\": h, \"tripId\": (tripId or \"\").strip(), \"checkIn\": (checkIn or \"\").strip(), \"checkOut\": (checkOut or \"\").strip(), \"overBudgetReason\": (overBudgetReason or \"\").strip()}"
-        code_language: python3
-        outputs:
-          type:
-            type: string
-            children: null
-          flightId:
-            type: string
-            children: null
-          hotelId:
-            type: string
-            children: null
-          tripId:
-            type: string
-            children: null
-          checkIn:
-            type: string
-            children: null
-          checkOut:
-            type: string
-            children: null
-          overBudgetReason:
-            type: string
-            children: null
-      position:
-        x: 1540.0
-        y: 700.0
-      positionAbsolute:
-        x: 1540.0
-        y: 700.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_create_order
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-创建订单
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/orders?type={{#code_book_type.type#}}&userId={{#start_node.user_id#}}&tripId={{#code_book_type.tripId#}}&flightId={{#code_book_type.flightId#}}&hotelId={{#code_book_type.hotelId#}}&checkIn={{#code_book_type.checkIn#}}&checkOut={{#code_book_type.checkOut#}}&overBudgetReason={{#code_book_type.overBudgetReason#}}'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 1820.0
-        y: 700.0
-      positionAbsolute:
-        x: 1820.0
-        y: 700.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_final_order
-      type: custom
-      data:
-        type: code
-        title: 代码-订单输出
-        desc: ''
-        selected: false
-        variables:
-        - variable: order_body
-          label: order_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_create_order
-          - body
-        code: "import json\n\ndef main(order_body: str) -> dict:\n    reply = \"正在为您下单…\"\n    cards = {}\n    try:\n        data = json.loads(order_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"order\"):\n            o = data[\"order\"]\n            cards[\"orders\"] = [o]\n            oid = o.get(\"orderId\") or o.get(\"id\") or \"\"\n            reply = \"已为您确认预订（订单号 \" + str(oid) + \"），企业支付 ¥\" + str(o.get(\"companyPay\", 0)) + \"，个人支付 ¥\" + str(o.get(\"personalPay\", 0)) + \"，邮件与日历回执已生成（模拟）。\"\n    except Exception:\n        pass\n    out = {\n        \"reply\": reply,\n        \"intent\": \"booking_confirm\",\n        \"state\": \"BookingConfirming\",\n        \"action\": \"booking_done\",\n        \"slots\": {},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
-      position:
-        x: 2100.0
-        y: 700.0
-      positionAbsolute:
-        x: 2100.0
         y: 700.0
       width: 244
       height: 90
@@ -1481,99 +819,18 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_cancel
+            comparison_operator: is
+            value: cancel
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: cancel
           logical_operator: and
       position:
         x: 1260.0
         y: 860.0
       positionAbsolute:
         x: 1260.0
-        y: 860.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: http_cancel
-      type: custom
-      data:
-        type: http-request
-        title: HTTP-取消订单
-        desc: ''
-        selected: false
-        retry_config:
-          enabled: false
-          max_retries: 3
-          retry_interval: 100
-          exponential_backoff:
-            enabled: false
-            multiplier: 2
-            max_interval: 10000
-        url: 'http://172.17.0.1:18084/api/v1/travel/dify-tools/orders/{{#code_parse.orderId#}}/cancel?userId={{#start_node.user_id#}}&scope=all'
-        method: get
-        headers: 'X-Dify-Tool-Key: 2bf9b7b758ba8596e950315f2b197e50ccbaa78e4b5fcf2e'
-        body:
-          type: none
-          data: []
-        params: ''
-        authorization:
-          type: no-auth
-          config: null
-        timeout:
-          max_connect_timeout: 10
-          max_read_timeout: 60
-          max_write_timeout: 60
-        ssl_verify: true
-      position:
-        x: 1540.0
-        y: 860.0
-      positionAbsolute:
-        x: 1540.0
-        y: 860.0
-      width: 244
-      height: 90
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-    - id: code_final_cancel
-      type: custom
-      data:
-        type: code
-        title: 代码-取消输出
-        desc: ''
-        selected: false
-        variables:
-        - variable: cancel_body
-          label: cancel_body
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - http_cancel
-          - body
-        - variable: orderId
-          label: orderId
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_parse
-          - orderId
-        code: "def main(cancel_body: str, orderId: str) -> dict:\n    out = {\n        \"reply\": \"已取消订单 \" + (orderId or \"\") + \"，关联出差单已重新激活，可再次用于预订。\",\n        \"intent\": \"cancel_adjust\",\n        \"state\": \"Idle\",\n        \"action\": \"cancelled\",\n        \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
-      position:
-        x: 1820.0
-        y: 860.0
-      positionAbsolute:
-        x: 1820.0
         y: 860.0
       width: 244
       height: 90
@@ -1592,11 +849,12 @@ workflow:
           case_id: 'true'
           conditions:
           - id: cond_if_chat
+            comparison_operator: is
+            value: chat
+            varType: string
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
-            value: chat
           logical_operator: and
       position:
         x: 1260.0
@@ -1633,12 +891,17 @@ workflow:
           value_selector:
           - llm_understand
           - text
-        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text = (reply or \"\").strip()\n    if not text:\n        text = \"请问还有什么可以帮您？\"\n    out = {\n        \"reply\": text,\n        \"intent\": \"chitchat\",\n        \"state\": \"Idle\",\n        \"action\": \"chat\",\n        \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
-        code_language: python3
         outputs:
           result:
             type: string
             children: null
+        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text\
+          \ = (reply or \"\").strip()\n    if not text:\n        text = \"请问还有什么可以帮您？\"\
+          \n    out = {\n        \"reply\": text,\n        \"intent\": \"chitchat\"\
+          ,\n        \"state\": \"Idle\",\n        \"action\": \"chat\",\n       \
+          \ \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n \
+          \   }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
+        code_language: python3
       position:
         x: 1540.0
         y: 1020.0
@@ -1666,45 +929,13 @@ workflow:
           value_selector:
           - code_final_policy
           - result
-        - variable: flights_result
-          label: flights_result
+        - variable: need_data_result
+          label: need_data_result
           type: text-input
           required: false
           options: []
           value_selector:
-          - code_final_flights
-          - result
-        - variable: hotels_result
-          label: hotels_result
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_final_hotels
-          - result
-        - variable: trip_result
-          label: trip_result
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_final_trip
-          - result
-        - variable: order_result
-          label: order_result
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_final_order
-          - result
-        - variable: cancel_result
-          label: cancel_result
-          type: text-input
-          required: false
-          options: []
-          value_selector:
-          - code_final_cancel
+          - code_final_need_data
           - result
         - variable: chat_result
           label: chat_result
@@ -1714,12 +945,23 @@ workflow:
           value_selector:
           - code_final_chat
           - result
-        code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\", \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\", \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(policy_result: str, flights_result: str, hotels_result: str, trip_result: str, order_result: str, cancel_result: str, chat_result: str) -> dict:\n    for v in (policy_result, flights_result, hotels_result, trip_result, order_result, cancel_result, chat_result):\n        if v and v.strip():\n            try:\n                d = json.loads(v)\n                if isinstance(d, dict) and d.get(\"reply\"):\n                    d[\"reply\"] = strip_think(d[\"reply\"])\n                return {\"result\": json.dumps(d, ensure_ascii=False)}\n            except Exception:\n                return {\"result\": v.strip()}\n    return {\"result\": '{\\\"reply\\\":\\\"抱歉，我暂时无法处理这个请求。\\\",\\\"intent\\\":\\\"unknown\\\",\\\"state\\\":\\\"Idle\\\",\\\"action\\\":\\\"chat\\\",\\\"slots\\\":{},\\\"cards\\\":{},\\\"confirm\\\":null}'}"
-        code_language: python3
         outputs:
           result:
             type: string
             children: null
+        code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\"\
+          , \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\"\
+          , \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(policy_result:\
+          \ str, need_data_result: str, chat_result: str) -> dict:\n    for v in (policy_result,\
+          \ need_data_result, chat_result):\n        if v and v.strip():\n       \
+          \     try:\n                d = json.loads(v)\n                if isinstance(d,\
+          \ dict) and d.get(\"reply\"):\n                    d[\"reply\"] = strip_think(d[\"\
+          reply\"])\n                return {\"result\": json.dumps(d, ensure_ascii=False)}\n\
+          \            except Exception:\n                return {\"result\": v.strip()}\n\
+          \    return {\"result\": '{\"reply\":\"抱歉，我暂时无法处理这个请求。\",\"intent\":\"unknown\"\
+          ,\"state\":\"Idle\",\"action\":\"chat\",\"slots\":{},\"cards\":{},\"confirm\"\
+          :null}'}\n"
+        code_language: python3
       position:
         x: 2400.0
         y: 900.0
@@ -1746,6 +988,106 @@ workflow:
       positionAbsolute:
         x: 2700.0
         y: 900.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_final_need_data
+      type: custom
+      data:
+        type: code
+        title: 代码-取数指令
+        desc: ''
+        selected: false
+        variables:
+        - variable: intent
+          label: intent
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - code_parse
+          - intent
+        - variable: route
+          label: route
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - code_route
+          - route
+        - variable: date
+          label: date
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - date
+        - variable: origin
+          label: origin
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - origin
+        - variable: destination
+          label: destination
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - destination
+        - variable: city
+          label: city
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - city
+        - variable: level
+          label: level
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - level
+        - variable: orderId
+          label: orderId
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - orderId
+        outputs:
+          result:
+            type: string
+            children: null
+        code: "import json\n\ndef main(intent: str, route: str, date: str, origin:\
+          \ str, destination: str, city: str, level: str, orderId: str) -> dict:\n\
+          \    m = {\"policy\": \"standards\", \"flight\": \"flights\", \"hotel\"\
+          : \"hotels\", \"trip\": \"itineraries\", \"book\": \"orders\", \"cancel\"\
+          : \"cancel\"}\n    nt = m.get((route or \"\").strip(), \"chat\")\n    out\
+          \ = {\n        \"reply\": \"\",\n        \"intent\": (intent or \"\").strip(),\n\
+          \        \"state\": \"\",\n        \"action\": \"need_data\",\n        \"\
+          slots\": {\"date\": (date or \"\"), \"origin\": (origin or \"\"), \"destination\"\
+          : (destination or \"\"), \"city\": (city or \"\"), \"level\": (level or\
+          \ \"\"), \"orderId\": (orderId or \"\")},\n        \"cards\": {},\n    \
+          \    \"confirm\": None,\n        \"need_type\": nt,\n    }\n    return {\"\
+          result\": json.dumps(out, ensure_ascii=False)}\n"
+        code_language: python3
+      position:
+        x: 3004.0
+        y: 227.0
+      positionAbsolute:
+        x: 3004.0
+        y: 227.0
       width: 244
       height: 90
       selected: false
@@ -1836,18 +1178,6 @@ workflow:
         targetType: if-else
         isInIteration: false
         isInLoop: false
-    - id: if_policy_std-true-http_standards-target
-      source: if_policy_std
-      target: http_standards
-      sourceHandle: 'true'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
     - id: if_policy_std-false-kbr-target
       source: if_policy_std
       target: kbr
@@ -1860,18 +1190,6 @@ workflow:
         targetType: knowledge-retrieval
         isInIteration: false
         isInLoop: false
-    - id: http_standards-source-llm_policy_std-target
-      source: http_standards
-      target: llm_policy_std
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: llm
-        isInIteration: false
-        isInLoop: false
     - id: kbr-source-llm_policy_ans-target
       source: kbr
       target: llm_policy_ans
@@ -1882,18 +1200,6 @@ workflow:
       data:
         sourceType: knowledge-retrieval
         targetType: llm
-        isInIteration: false
-        isInLoop: false
-    - id: llm_policy_std-source-code_final_policy-target
-      source: llm_policy_std
-      target: code_final_policy
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: llm
-        targetType: code
         isInIteration: false
         isInLoop: false
     - id: llm_policy_ans-source-code_final_policy-target
@@ -1956,54 +1262,6 @@ workflow:
         targetType: code
         isInIteration: false
         isInLoop: false
-    - id: if_flight_ask-false-http_trips-target
-      source: if_flight_ask
-      target: http_trips
-      sourceHandle: 'false'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
-    - id: http_trips-source-http_flights-target
-      source: http_trips
-      target: http_flights
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
-    - id: http_flights-source-llm_recommend_flights-target
-      source: http_flights
-      target: llm_recommend_flights
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: llm
-        isInIteration: false
-        isInLoop: false
-    - id: llm_recommend_flights-source-code_final_flights-target
-      source: llm_recommend_flights
-      target: code_final_flights
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: llm
-        targetType: code
-        isInIteration: false
-        isInLoop: false
     - id: if_hotel-true-code_hotel_check-target
       source: if_hotel
       target: code_hotel_check
@@ -2052,54 +1310,6 @@ workflow:
         targetType: code
         isInIteration: false
         isInLoop: false
-    - id: if_hotel_ask-false-http_hotels-target
-      source: if_hotel_ask
-      target: http_hotels
-      sourceHandle: 'false'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
-    - id: http_hotels-source-llm_recommend_hotels-target
-      source: http_hotels
-      target: llm_recommend_hotels
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: llm
-        isInIteration: false
-        isInLoop: false
-    - id: llm_recommend_hotels-source-code_final_hotels-target
-      source: llm_recommend_hotels
-      target: code_final_hotels
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: llm
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: if_trip-true-http_itineraries-target
-      source: if_trip
-      target: http_itineraries
-      sourceHandle: 'true'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
     - id: if_trip-false-if_book-target
       source: if_trip
       target: if_book
@@ -2110,42 +1320,6 @@ workflow:
       data:
         sourceType: if-else
         targetType: if-else
-        isInIteration: false
-        isInLoop: false
-    - id: http_itineraries-source-llm_summarize_trip-target
-      source: http_itineraries
-      target: llm_summarize_trip
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: llm
-        isInIteration: false
-        isInLoop: false
-    - id: llm_summarize_trip-source-code_final_trip-target
-      source: llm_summarize_trip
-      target: code_final_trip
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: llm
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: if_book-true-code_book_type-target
-      source: if_book
-      target: code_book_type
-      sourceHandle: 'true'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: code
         isInIteration: false
         isInLoop: false
     - id: if_book-false-if_cancel-target
@@ -2160,42 +1334,6 @@ workflow:
         targetType: if-else
         isInIteration: false
         isInLoop: false
-    - id: code_book_type-source-http_create_order-target
-      source: code_book_type
-      target: http_create_order
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
-    - id: http_create_order-source-code_final_order-target
-      source: http_create_order
-      target: code_final_order
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: if_cancel-true-http_cancel-target
-      source: if_cancel
-      target: http_cancel
-      sourceHandle: 'true'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: if-else
-        targetType: http-request
-        isInIteration: false
-        isInLoop: false
     - id: if_cancel-false-if_chat-target
       source: if_cancel
       target: if_chat
@@ -2206,18 +1344,6 @@ workflow:
       data:
         sourceType: if-else
         targetType: if-else
-        isInIteration: false
-        isInLoop: false
-    - id: http_cancel-source-code_final_cancel-target
-      source: http_cancel
-      target: code_final_cancel
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: http-request
-        targetType: code
         isInIteration: false
         isInLoop: false
     - id: if_chat-true-code_final_chat-target
@@ -2256,66 +1382,6 @@ workflow:
         targetType: code
         isInIteration: false
         isInLoop: false
-    - id: code_final_flights-source-code_final_master-target
-      source: code_final_flights
-      target: code_final_master
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: code_final_hotels-source-code_final_master-target
-      source: code_final_hotels
-      target: code_final_master
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: code_final_trip-source-code_final_master-target
-      source: code_final_trip
-      target: code_final_master
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: code_final_order-source-code_final_master-target
-      source: code_final_order
-      target: code_final_master
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: code
-        isInIteration: false
-        isInLoop: false
-    - id: code_final_cancel-source-code_final_master-target
-      source: code_final_cancel
-      target: code_final_master
-      sourceHandle: source
-      targetHandle: target
-      type: custom
-      zIndex: 0
-      data:
-        sourceType: code
-        targetType: code
-        isInIteration: false
-        isInLoop: false
     - id: code_final_chat-source-code_final_master-target
       source: code_final_chat
       target: code_final_master
@@ -2340,6 +1406,90 @@ workflow:
         targetType: answer
         isInIteration: false
         isInLoop: false
+    - id: if_policy_std-true-code_final_need_data-target
+      source: if_policy_std
+      target: code_final_need_data
+      sourceHandle: 'true'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_flight_ask-false-code_final_need_data-target
+      source: if_flight_ask
+      target: code_final_need_data
+      sourceHandle: 'false'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_hotel_ask-false-code_final_need_data-target
+      source: if_hotel_ask
+      target: code_final_need_data
+      sourceHandle: 'false'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_trip-true-code_final_need_data-target
+      source: if_trip
+      target: code_final_need_data
+      sourceHandle: 'true'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_book-true-code_final_need_data-target
+      source: if_book
+      target: code_final_need_data
+      sourceHandle: 'true'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_cancel-true-code_final_need_data-target
+      source: if_cancel
+      target: code_final_need_data
+      sourceHandle: 'true'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_final_need_data-source-code_final_master-target
+      source: code_final_need_data
+      target: code_final_master
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: code
+        isInIteration: false
+        isInLoop: false
     viewport:
       x: 0.0
       y: 0.0
@@ -2347,7 +1497,7 @@ workflow:
   features:
     file_upload:
       enabled: false
-    opening_statement: '您好，我是复星差旅 AI 管家，可以帮您：订机票 / 订酒店 / 查行程 / 咨询差旅政策 / 取消行程。'
+    opening_statement: 您好，我是复星差旅 AI 管家，可以帮您：订机票 / 订酒店 / 查行程 / 咨询差旅政策 / 取消行程。
     retriever_resource:
       enabled: false
     sensitive_word_avoidance:
@@ -2363,8 +1513,9 @@ workflow:
   conversation_variables: []
   rag_pipeline_variables: []
 dependencies:
-- current_identifier: null
+- name: ''
   type: marketplace
+  version: ''
   value:
     marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
     version: null
