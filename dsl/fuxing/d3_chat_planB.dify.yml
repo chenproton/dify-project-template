@@ -95,7 +95,7 @@ workflow:
             6. reply 仅在纯对话/追问/闲聊场景给出（工具取数场景留空）。
 
             当前用户：{{#start_node.user_name#}}（职级 {{#start_node.level#}}，角色 {{#start_node.role#}}）
-            用户输入：{{#sys.query#}} （历史对话由记忆自动注入，务必结合上下文理解本次输入）\n\n系统数据（后端工具取数后注入，可能为空）：\n{{#start_node.tool_data#}}\n\n规则：若系统数据非空，则基于其中的航班/酒店/差标/行程/订单/取消结果数据生成最终回复与推荐（列表用数字编号），intent
+            用户输入：{{#sys.query#}} （历史对话由记忆自动注入，务必结合上下文理解本次输入）\n\n【最高优先规则】如果系统数据（{{#start_node.tool_data#}}）非空，本次输入必须基于系统数据生成最终回复：reply 填充完整回答（列出数据内容），action 用对应展示动作（show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled），need_ask=false，intent 保持当前意图；禁止输出 need_data，禁止 reply 留空。\n\n系统数据（后端工具取数后注入，可能为空）：\n{{#start_node.tool_data#}}\n\n规则：若系统数据非空，则基于其中的航班/酒店/差标/行程/订单/取消结果数据生成最终回复与推荐（列表用数字编号），intent
             保持当前预订意图，reply 填充完整回复文本，need_ask=false；若系统数据为空且是取数场景，need_ask=false、reply
             留空，由后端取数后重新调用。'
         vision:
@@ -476,6 +476,10 @@ workflow:
           value_selector:
           - llm_policy_ans
           - text
+        outputs:
+          result:
+            type: string
+            children: null
         code: "import json, re\n\ndef main(reply_rag: str) -> dict:\n    reply = (reply_rag\
           \ or \"\").strip() or \"已为您查询相关政策。\"\n    out = {\n        \"reply\": reply,\n\
           \        \"intent\": \"policy_query\",\n        \"state\": \"PolicyQA\"\
@@ -483,10 +487,6 @@ workflow:
           \    \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\"\
           : json.dumps(out, ensure_ascii=False)}\n"
         code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
       position:
         x: 2660.0
         y: 60.0
@@ -1065,23 +1065,67 @@ workflow:
           value_selector:
           - code_parse
           - orderId
+        - variable: flightNo
+          label: flightNo
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - flightNo
+        - variable: hotelId
+          label: hotelId
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - hotelId
+        - variable: tripId
+          label: tripId
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - tripId
+        - variable: overBudgetReason
+          label: overBudgetReason
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - overBudgetReason
+        - variable: queryTarget
+          label: queryTarget
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_parse
+          - queryTarget
+        code: "import json\n\ndef main(intent: str, route: str, date: str, origin:\
+          \ str, destination: str, city: str, level: str, orderId: str, flightNo:\
+          \ str, hotelId: str, tripId: str, overBudgetReason: str, queryTarget: str)\
+          \ -> dict:\n    m = {\"policy\": \"standards\", \"flight\": \"flights\"\
+          , \"hotel\": \"hotels\", \"trip\": \"itineraries\", \"book\": \"orders\"\
+          , \"cancel\": \"cancel\"}\n    nt = m.get((route or \"\").strip(), \"chat\"\
+          )\n    out = {\n        \"reply\": \"\",\n        \"intent\": (intent or\
+          \ \"\").strip(),\n        \"state\": \"\",\n        \"action\": \"need_data\"\
+          ,\n        \"slots\": {\"date\": (date or \"\"), \"origin\": (origin or\
+          \ \"\"), \"destination\": (destination or \"\"), \"city\": (city or \"\"\
+          ), \"level\": (level or \"\"), \"orderId\": (orderId or \"\"), \"flightNo\"\
+          : (flightNo or \"\"), \"hotelId\": (hotelId or \"\"), \"tripId\": (tripId\
+          \ or \"\"), \"overBudgetReason\": (overBudgetReason or \"\"), \"queryTarget\"\
+          : (queryTarget or \"\")},\n        \"cards\": {},\n        \"confirm\":\
+          \ None,\n        \"need_type\": nt,\n    }\n    return {\"result\": json.dumps(out,\
+          \ ensure_ascii=False)}\n"
+        code_language: python3
         outputs:
           result:
             type: string
             children: null
-        code: "import json\n\ndef main(intent: str, route: str, date: str, origin:\
-          \ str, destination: str, city: str, level: str, orderId: str) -> dict:\n\
-          \    m = {\"policy\": \"standards\", \"flight\": \"flights\", \"hotel\"\
-          : \"hotels\", \"trip\": \"itineraries\", \"book\": \"orders\", \"cancel\"\
-          : \"cancel\"}\n    nt = m.get((route or \"\").strip(), \"chat\")\n    out\
-          \ = {\n        \"reply\": \"\",\n        \"intent\": (intent or \"\").strip(),\n\
-          \        \"state\": \"\",\n        \"action\": \"need_data\",\n        \"\
-          slots\": {\"date\": (date or \"\"), \"origin\": (origin or \"\"), \"destination\"\
-          : (destination or \"\"), \"city\": (city or \"\"), \"level\": (level or\
-          \ \"\"), \"orderId\": (orderId or \"\")},\n        \"cards\": {},\n    \
-          \    \"confirm\": None,\n        \"need_type\": nt,\n    }\n    return {\"\
-          result\": json.dumps(out, ensure_ascii=False)}\n"
-        code_language: python3
       position:
         x: 3004.0
         y: 227.0
