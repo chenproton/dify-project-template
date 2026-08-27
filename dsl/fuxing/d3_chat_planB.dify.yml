@@ -90,7 +90,7 @@ workflow:
             - chitchat(6)：闲聊 - unknown(7)：无法识别
 
             槽位字段（无法确定一律空字符串）： - date：优先 YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达；今天/明天/后天等相对日期可直接填入（后端归一化）。酒店场景：date 填入住日期，退房日期一并填入（格式 YYYY-MM-DD至YYYY-MM-DD 或 YYYY-MM-DD~YYYY-MM-DD；只给入住日期则默认住1晚） - origin/destination：出发/到达城市
-            - city：酒店目的城市 - level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；仅在用户明确提及职级时填写（如"M5级别的呢""P6的标准"），当前用户职级只作上下文、不自动填入槽位
+            - city：酒店目的城市 - level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；用户明确提及职级时填用户所述（如"M5级别的呢"→M5）；policy_query 且用户未提职级时，默认填当前用户职级（{{#start_node.level#}}），以便按用户等级查询差旅标准
             - queryTarget：me / subordinate / leader - tripId / flightNo / hotelId
             / orderId：业务对象标识 - overBudgetReason：official（因公超标）/ personal（因私超标）
 
@@ -1198,7 +1198,7 @@ workflow:
             temperature: 0.2
         prompt_template:
         - role: system
-          text: '你是复星差旅 AI 管家。基于系统返回的数据（航班/酒店/差标/行程/订单/取消结果）生成最终回复。要求：reply 为给用户的简短引导文本（≤60字：点明结果并引导用户点击卡片或继续，如“已为您找到以下航班，点击卡片即可预订”；金额一律金额化表述、禁止星级）；action 用 show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled 之一；cards 透传系统数据中的对应字段（standards/flights/hotels/itineraries/orders）；intent 保持当前意图；slots 透传相关槽位；confirm 为 null。只输出 JSON：{"reply":"...","intent":"...","state":"...","action":"...","slots":{},"cards":{},"confirm":null}，不要 markdown 代码块。系统数据：{{#start_node.tool_data#}}。用户输入：{{#sys.query#}}'
+          text: '你是复星差旅 AI 管家。基于系统返回的数据（航班/酒店/差标/行程/订单/取消结果）生成最终回复。要求：reply 为给用户的简短引导文本（≤60字：点明结果并引导用户点击卡片或继续，如“已为您找到以下航班，点击卡片即可预订”；金额一律金额化表述、禁止星级）；show_standards（差旅标准）时 reply 开头必须标注依据职级：写“根据{{#start_node.level#}}级差旅标准，你的标准如下”，不得只写通用的“已为您查询”；action 用 show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled 之一；cards 透传系统数据中的对应字段（standards/flights/hotels/itineraries/orders）；intent 保持当前意图；slots 透传相关槽位；confirm 为 null。只输出 JSON：{"reply":"...","intent":"...","state":"...","action":"...","slots":{},"cards":{},"confirm":null}，不要 markdown 代码块。系统数据：{{#start_node.tool_data#}}。用户输入：{{#sys.query#}}'
         vision:
           enabled: false
           configs:
