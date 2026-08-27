@@ -95,7 +95,8 @@ workflow:
 
             3. 回答必须输出 JSON 格式：{"answer":"回答内容","citations":[{"document":"复星集团全球差旅费报销管理规定(2026)","page":12}]}
 
-            4. citations 引用检索到的文档片段（document 为文档名称，page 为片段序号/页码，无法确定时用 0）。
+            4. citations 引用检索到的文档片段（document 为文档名称，page 为片段序号/页码，无法确定时用 0）；同一 document+page
+            只输出一条，最多输出 3 条，禁止重复。
 
             5. 检索片段与问题无关或为空时，answer 返回兜底话术："抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。"，citations
             返回 []。
@@ -153,21 +154,6 @@ workflow:
           value_selector:
           - llm_answer
           - text
-        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
-          \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
-          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
-          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
-          \    except Exception:\n            data = None\n    if not isinstance(data,\
-          \ dict):\n        return {\"answer\": \"抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。\"\
-          , \"citations_json\": \"[]\"}\n    ans = str(data.get(\"answer\", \"\")).strip()\n\
-          \    cites = data.get(\"citations\", [])\n    if not isinstance(cites, list):\n\
-          \        cites = []\n    cleaned_cites = []\n    for c in cites[:5]:\n \
-          \       if isinstance(c, dict):\n            cleaned_cites.append({\"document\"\
-          : c.get(\"document\", \"复星集团全球差旅费报销管理规定(2026)\"), \"page\": c.get(\"page\"\
-          , 0)})\n    if not ans:\n        ans = \"抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。\"\
-          \n    return {\"answer\": ans, \"citations_json\": json.dumps(cleaned_cites,\
-          \ ensure_ascii=False)}\n"
-        code_language: python3
         outputs:
           answer:
             type: string
@@ -175,6 +161,27 @@ workflow:
           citations_json:
             type: string
             children: null
+        code: "import json, re\n\nFALLBACK = \"抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。\"\
+          \nDEFAULT_DOC = \"复星集团全球差旅费报销管理规定(2026)\"\n\ndef main(raw: str) -> dict:\n\
+          \    text = raw.strip()\n    text = re.sub(r\"<think>.*?</think>\", \"\"\
+          , text, flags=re.DOTALL)\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n\
+          \    data = None\n    if m:\n        try:\n            data = json.loads(m.group(0))\n\
+          \        except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        return {\"answer\": FALLBACK, \"citations_json\": \"[]\"\
+          }\n    ans = str(data.get(\"answer\", \"\")).strip()\n    cites = data.get(\"\
+          citations\", [])\n    if not isinstance(cites, list):\n        cites = []\n\
+          \    cleaned_cites = []\n    seen = set()\n    for c in cites[:10]:\n  \
+          \      if not isinstance(c, dict):\n            continue\n        doc =\
+          \ str(c.get(\"document\", \"\") or DEFAULT_DOC).strip() or DEFAULT_DOC\n\
+          \        page = c.get(\"page\", 0)\n        if isinstance(page, str) and\
+          \ page.strip().isdigit():\n            page = int(page.strip())\n      \
+          \  if not isinstance(page, int):\n            page = 0\n        key = (doc,\
+          \ page)\n        if key in seen:\n            continue\n        seen.add(key)\n\
+          \        cleaned_cites.append({\"document\": doc, \"page\": page})\n   \
+          \     if len(cleaned_cites) >= 3:\n            break\n    if not ans:\n\
+          \        ans = FALLBACK\n    return {\"answer\": ans, \"citations_json\"\
+          : json.dumps(cleaned_cites, ensure_ascii=False)}\n"
+        code_language: python3
       position:
         x: 1020.0
         y: 282.0
@@ -287,8 +294,9 @@ workflow:
   conversation_variables: []
   rag_pipeline_variables: []
 dependencies:
-- current_identifier: null
+- name: ''
   type: marketplace
+  version: ''
   value:
     marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
     version: null

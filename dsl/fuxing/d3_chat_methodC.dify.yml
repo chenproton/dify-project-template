@@ -42,7 +42,7 @@ workflow:
           name: deepseek-v4-flash
           mode: chat
           completion_params:
-            temperature: 0.4
+            temperature: 0.3
         prompt_template:
         - role: system
           text: '你是"复星差旅 AI 管家"，负责多轮对话式的差旅预订编排。
@@ -101,7 +101,7 @@ workflow:
           enabled: true
           window:
             enabled: true
-            size: 12
+            size: 8
         context:
           enabled: false
           variable_selector: []
@@ -142,6 +142,13 @@ workflow:
           value_selector:
           - llm_chat
           - text
+        outputs:
+          reply:
+            type: string
+            children: null
+          state_json:
+            type: string
+            children: null
         code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
           \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
           \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
@@ -156,13 +163,6 @@ workflow:
           : state, \"intent\": intent, \"slots\": slots, \"flights\": flights[:10],\
           \ \"hotels\": hotels[:10]}, ensure_ascii=False)}\n"
         code_language: python3
-        outputs:
-          reply:
-            type: string
-            children: null
-          state_json:
-            type: string
-            children: null
       position:
         x: 720.0
         y: 282.0
@@ -254,8 +254,9 @@ workflow:
   conversation_variables: []
   rag_pipeline_variables: []
 dependencies:
-- current_identifier: null
+- name: ''
   type: marketplace
+  version: ''
   value:
     marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
     version: null

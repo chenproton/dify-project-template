@@ -164,16 +164,28 @@ workflow:
           value_selector:
           - llm_intent
           - text
-        code: "import json\nimport re\n\nVALID_INTENTS = {\n    \"personal_booking\"\
-          : 1, \"cancel_adjust\": 2, \"flight_book\": 3, \"hotel_book\": 3,\n    \"\
-          combo_book\": 3, \"trip_query\": 4, \"policy_query\": 5, \"chitchat\": 6,\
-          \ \"unknown\": 7,\n}\n\ndef main(raw: str) -> dict:\n    text = raw.strip()\n\
-          \    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n\
-          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
-          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
-          \    except Exception:\n            data = None\n    if not isinstance(data,\
-          \ dict):\n        return {\"intent\": \"unknown\", \"priority\": 7, \"slots_json\"\
-          : \"{}\", \"raw\": raw[:500]}\n    intent = data.get(\"intent\", \"unknown\"\
+        outputs:
+          intent:
+            type: string
+            children: null
+          priority:
+            type: number
+            children: null
+          slots:
+            type: object
+            children: null
+          raw:
+            type: string
+            children: null
+        code: "import json, re\n\nVALID_INTENTS = {\"personal_booking\": 1, \"cancel_adjust\"\
+          : 2, \"flight_book\": 3, \"hotel_book\": 3, \"combo_book\": 3, \"trip_query\"\
+          : 4, \"policy_query\": 5, \"chitchat\": 6, \"unknown\": 7}\n\ndef main(raw:\
+          \ str) -> dict:\n    text = raw.strip()\n    text = re.sub(r\"<think>.*?</think>\"\
+          , \"\", text, flags=re.DOTALL)\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n\
+          \    data = None\n    if m:\n        try:\n            data = json.loads(m.group(0))\n\
+          \        except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        return {\"intent\": \"unknown\", \"priority\": 7, \"slots\"\
+          : {}, \"raw\": raw[:500]}\n    intent = data.get(\"intent\", \"unknown\"\
           )\n    if intent not in VALID_INTENTS:\n        intent = \"unknown\"\n \
           \   slots = data.get(\"slots\", {})\n    if not isinstance(slots, dict):\n\
           \        slots = {}\n    cleaned = {\n        \"date\": slots.get(\"date\"\
@@ -182,22 +194,8 @@ workflow:
           \        \"city\": slots.get(\"city\", \"\") or \"\",\n        \"queryTarget\"\
           : slots.get(\"queryTarget\", \"\") or \"\",\n    }\n    return {\n     \
           \   \"intent\": intent,\n        \"priority\": VALID_INTENTS[intent],\n\
-          \        \"slots_json\": json.dumps(cleaned, ensure_ascii=False),\n    \
-          \    \"raw\": text[:500],\n    }\n"
+          \        \"slots\": cleaned,\n        \"raw\": text[:500],\n    }\n"
         code_language: python3
-        outputs:
-          intent:
-            type: string
-            children: null
-          priority:
-            type: number
-            children: null
-          slots_json:
-            type: string
-            children: null
-          raw:
-            type: string
-            children: null
       position:
         x: 720.0
         y: 282.0
@@ -230,8 +228,8 @@ workflow:
         - variable: slots
           value_selector:
           - code_validate
-          - slots_json
-          value_type: string
+          - slots
+          value_type: object
       position:
         x: 1040.0
         y: 282.0
@@ -303,8 +301,9 @@ workflow:
   conversation_variables: []
   rag_pipeline_variables: []
 dependencies:
-- current_identifier: null
+- name: ''
   type: marketplace
+  version: ''
   value:
     marketplace_plugin_unique_identifier: langgenius/deepseek:0.1.0@e000000000000000000000000000000000000000000000000000000000000000
     version: null
