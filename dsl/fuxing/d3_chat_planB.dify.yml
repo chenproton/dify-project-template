@@ -86,7 +86,7 @@ workflow:
 - date：YYYY-MM-DD，支持"8月20日""8.20""8/20"等中文数字表达
 - origin/destination：出发/到达城市
 - city：酒店目的城市
-- level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）
+- level：职级序列（M/P/I + 数字，如 M5、P13、M3/P9）；仅在用户明确提及职级时填写（如"M5级别的呢""P6的标准"），当前用户职级只作上下文、不自动填入槽位
 - queryTarget：me / subordinate / leader
 - tripId / flightNo / hotelId / orderId：业务对象标识
 - overBudgetReason：official（因公超标）/ personal（因私超标）
