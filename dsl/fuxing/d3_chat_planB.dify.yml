@@ -435,9 +435,7 @@ workflow:
             temperature: 0.2
         prompt_template:
         - role: system
-          text: 你是差旅政策问答助手。基于检索到的政策片段回答用户问题。要求：1. 只依据检索片段回答，不得编造；2. 差标一律金额化表述，禁止出现星级/五星；3.
-            若检索片段与问题无关，回复：抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅相关规定。检索片段：{{#kbr.result#}}。用户问题：{{#sys.query#}}。只输出回答文本，不要
-            JSON。
+          text: '你是差旅政策问答助手。基于检索到的政策片段回答用户问题。要求：1. 只依据检索片段回答，不得编造；2. 差标一律金额化表述，禁止出现星级/五星；3. 回答必须简洁（单次≤120字）：问题笼统时（如“差旅政策”“有哪些标准”）先只回答最关心的一个方面（默认先给酒店标准），结尾加一句“如需机票/高铁标准请继续问我”，不逐条罗列全部标准；4. 若检索片段与问题无关，回复：抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅相关规定。检索片段：{{#kbr.result#}}。用户问题：{{#sys.query#}}。只输出回答文本，不要 JSON。'
         vision:
           enabled: false
           configs:
@@ -1200,17 +1198,7 @@ workflow:
             temperature: 0.2
         prompt_template:
         - role: system
-          text: '你是复星差旅 AI 管家。基于系统返回的数据（航班/酒店/差标/行程/订单/取消结果）生成最终回复。要求：reply 为给用户的完整回答文本（列表用数字编号，金额一律金额化表述、禁止星级）；action
-            用 show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled
-            之一；cards 透传系统数据中的对应字段（standards/flights/hotels/itineraries/orders）；intent
-            保持当前意图；slots 透传相关槽位；confirm 为 null。只输出 JSON：{"reply":"...","intent":"...","state":"...","action":"...","slots":{},"cards":{},"confirm":null}，不要
-            markdown 代码块。
-
-
-            系统数据：{{#start_node.tool_data#}}
-
-
-            用户输入：{{#sys.query#}}'
+          text: '你是复星差旅 AI 管家。基于系统返回的数据（航班/酒店/差标/行程/订单/取消结果）生成最终回复。要求：reply 为给用户的简短引导文本（≤60字：点明结果并引导用户点击卡片或继续，如“已为您找到以下航班，点击卡片即可预订”；金额一律金额化表述、禁止星级）；action 用 show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled 之一；cards 透传系统数据中的对应字段（standards/flights/hotels/itineraries/orders）；intent 保持当前意图；slots 透传相关槽位；confirm 为 null。只输出 JSON：{"reply":"...","intent":"...","state":"...","action":"...","slots":{},"cards":{},"confirm":null}，不要 markdown 代码块。系统数据：{{#start_node.tool_data#}}。用户输入：{{#sys.query#}}'
         vision:
           enabled: false
           configs:
