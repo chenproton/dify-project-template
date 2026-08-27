@@ -233,7 +233,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: policy
           logical_operator: and
       position:
@@ -306,7 +306,7 @@ workflow:
             variable_selector:
             - code_policy_route
             - route2
-            comparison_operator: eq
+            comparison_operator: is
             value: standard
           logical_operator: and
       position:
@@ -564,7 +564,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: flight
           logical_operator: and
       position:
@@ -653,7 +653,7 @@ workflow:
             variable_selector:
             - code_flight_check
             - ask
-            comparison_operator: eq
+            comparison_operator: is
             value: 'true'
           logical_operator: and
       position:
@@ -870,7 +870,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: hotel
           logical_operator: and
       position:
@@ -962,7 +962,7 @@ workflow:
             variable_selector:
             - code_hotel_check
             - ask
-            comparison_operator: eq
+            comparison_operator: is
             value: 'true'
           logical_operator: and
       position:
@@ -1130,7 +1130,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: trip
           logical_operator: and
       position:
@@ -1290,7 +1290,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: book
           logical_operator: and
       position:
@@ -1484,7 +1484,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: cancel
           logical_operator: and
       position:
@@ -1595,7 +1595,7 @@ workflow:
             variable_selector:
             - code_route
             - route
-            comparison_operator: eq
+            comparison_operator: is
             value: chat
           logical_operator: and
       position:
