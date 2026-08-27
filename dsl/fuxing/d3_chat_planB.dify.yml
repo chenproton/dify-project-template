@@ -579,7 +579,7 @@ workflow:
             children: null
         code: "def main(date: str, origin: str, destination: str, need_ask: str) ->\
           \ dict:\n    need_data = bool(date and origin and destination)\n    return\
-          \ {\"need_data\": need_data, \"ask\": (need_ask or \"\").lower() == \"true\"\
+          \ {\"need_data\": need_data, \"ask\": (str(need_ask or \"\").lower()) == \"true\"\
           \ and not need_data}"
         code_language: python3
       position:
@@ -706,7 +706,7 @@ workflow:
         code: "def main(city: str, destination: str, need_ask: str, level: str) ->\
           \ dict:\n    c = (city or \"\").strip() or (destination or \"\").strip()\n\
           \    return {\"city\": c, \"level\": (level or \"\").strip(), \"ask\": bool(c)\
-          \ is False and (need_ask or \"\").lower() == \"true\"}"
+          \ is False and (str(need_ask or \"\").lower()) == \"true\"}"
         code_language: python3
       position:
         x: 1540.0
@@ -893,16 +893,7 @@ workflow:
           value_selector:
           - llm_understand
           - text
-        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text\
-          \ = (reply or \"\").strip()\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n\
-          \    if m:\n        try:\n            d = json.loads(m.group(0))\n     \
-          \       if isinstance(d, dict) and d.get(\"reply\"):\n                text\
-          \ = str(d[\"reply\"]).strip()\n        except Exception:\n            pass\n\
-          \    if not text:\n        text = \"请问还有什么可以帮您？\"\n    out = {\n       \
-          \ \"reply\": text,\n        \"intent\": \"chitchat\",\n        \"state\"\
-          : \"Idle\",\n        \"action\": \"chat\",\n        \"slots\": {},\n   \
-          \     \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"\
-          result\": json.dumps(out, ensure_ascii=False)}\n"
+        code: "import json, re\n\ndef extract_reply(text):\n    text = (text or \"\").strip()\n    # \u5265\u79bb deepseek \u63a8\u7406\u5757\u4e0e\u6ce8\u91ca\uff0c\u907f\u514d\u6c61\u67d3 JSON \u63d0\u53d6\n    text = re.sub(r\"<!--.*?-->\", \"\", text, flags=re.DOTALL)\n    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n    text = text.strip()\n    for _ in range(3):\n        found = None\n        # \u9010\u4f4d\u7f6e\u5c1d\u8bd5\u89e3\u6790\u5b8c\u6574 JSON\uff08\u5e94\u5bf9\u591a\u4e2a JSON \u62fc\u63a5/\u524d\u7f00\u566a\u58f0\uff09\n        for m in re.finditer(r\"\\{\", text):\n            try:\n                d, _ = json.JSONDecoder().raw_decode(text[m.start():])\n                if isinstance(d, dict):\n                    found = d\n                    break\n            except Exception:\n                continue\n        if found is None:\n            break\n        if found.get(\"reply\"):\n            nxt = str(found[\"reply\"]).strip()\n            if nxt == text:\n                break\n            text = nxt\n        else:\n            break\n    return text\n\ndef main(reply, ask_q):\n    text = extract_reply(reply)\n    if not text:\n        text = \"\u8bf7\u95ee\u8fd8\u6709\u4ec0\u4e48\u53ef\u4ee5\u5e2e\u60a8\uff1f\"\n    out = {\"reply\": text, \"intent\": \"chitchat\", \"state\": \"Idle\", \"action\": \"chat\", \"slots\": {}, \"cards\": {}, \"confirm\": None}\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
