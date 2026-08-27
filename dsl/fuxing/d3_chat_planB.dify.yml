@@ -95,7 +95,9 @@ workflow:
             6. reply 仅在纯对话/追问/闲聊场景给出（工具取数场景留空）。
 
             当前用户：{{#start_node.user_name#}}（职级 {{#start_node.level#}}，角色 {{#start_node.role#}}）
-            用户输入：{{#sys.query#}} （历史对话由记忆自动注入，务必结合上下文理解本次输入）\n\n【最高优先规则】如果系统数据（{{#start_node.tool_data#}}）非空，本次输入必须基于系统数据生成最终回复：reply 填充完整回答（列出数据内容），action 用对应展示动作（show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled），need_ask=false，intent 保持当前意图；禁止输出 need_data，禁止 reply 留空。\n\n系统数据（后端工具取数后注入，可能为空）：\n{{#start_node.tool_data#}}\n\n规则：若系统数据非空，则基于其中的航班/酒店/差标/行程/订单/取消结果数据生成最终回复与推荐（列表用数字编号），intent
+            用户输入：{{#sys.query#}} （历史对话由记忆自动注入，务必结合上下文理解本次输入）\n\n【最高优先规则】如果系统数据（{{#start_node.tool_data#}}）非空，本次输入必须基于系统数据生成最终回复：reply
+            填充完整回答（列出数据内容），action 用对应展示动作（show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled），need_ask=false，intent
+            保持当前意图；禁止输出 need_data，禁止 reply 留空。\n\n系统数据（后端工具取数后注入，可能为空）：\n{{#start_node.tool_data#}}\n\n规则：若系统数据非空，则基于其中的航班/酒店/差标/行程/订单/取消结果数据生成最终回复与推荐（列表用数字编号），intent
             保持当前预订意图，reply 填充完整回复文本，need_ask=false；若系统数据为空且是取数场景，need_ask=false、reply
             留空，由后端取数后重新调用。'
         vision:
@@ -937,6 +939,14 @@ workflow:
           value_selector:
           - code_final_need_data
           - result
+        - variable: data_result
+          label: data_result
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - code_final_data
+          - result
         - variable: chat_result
           label: chat_result
           type: text-input
@@ -945,23 +955,23 @@ workflow:
           value_selector:
           - code_final_chat
           - result
+        code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\"\
+          , \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\"\
+          , \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(policy_result:\
+          \ str, need_data_result: str, data_result: str, chat_result: str) -> dict:\n\
+          \    for v in (policy_result, need_data_result, data_result, chat_result):\n\
+          \        if v and v.strip():\n            try:\n                d = json.loads(v)\n\
+          \                if isinstance(d, dict) and d.get(\"reply\"):\n        \
+          \            d[\"reply\"] = strip_think(d[\"reply\"])\n                return\
+          \ {\"result\": json.dumps(d, ensure_ascii=False)}\n            except Exception:\n\
+          \                return {\"result\": v.strip()}\n    return {\"result\"\
+          : '{\"reply\":\"抱歉，我暂时无法处理这个请求。\",\"intent\":\"unknown\",\"state\":\"Idle\"\
+          ,\"action\":\"chat\",\"slots\":{},\"cards\":{},\"confirm\":null}'}\n"
+        code_language: python3
         outputs:
           result:
             type: string
             children: null
-        code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\"\
-          , \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\"\
-          , \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(policy_result:\
-          \ str, need_data_result: str, chat_result: str) -> dict:\n    for v in (policy_result,\
-          \ need_data_result, chat_result):\n        if v and v.strip():\n       \
-          \     try:\n                d = json.loads(v)\n                if isinstance(d,\
-          \ dict) and d.get(\"reply\"):\n                    d[\"reply\"] = strip_think(d[\"\
-          reply\"])\n                return {\"result\": json.dumps(d, ensure_ascii=False)}\n\
-          \            except Exception:\n                return {\"result\": v.strip()}\n\
-          \    return {\"result\": '{\"reply\":\"抱歉，我暂时无法处理这个请求。\",\"intent\":\"unknown\"\
-          ,\"state\":\"Idle\",\"action\":\"chat\",\"slots\":{},\"cards\":{},\"confirm\"\
-          :null}'}\n"
-        code_language: python3
       position:
         x: 2400.0
         y: 900.0
@@ -1105,6 +1115,10 @@ workflow:
           value_selector:
           - code_parse
           - queryTarget
+        outputs:
+          result:
+            type: string
+            children: null
         code: "import json\n\ndef main(intent: str, route: str, date: str, origin:\
           \ str, destination: str, city: str, level: str, orderId: str, flightNo:\
           \ str, hotelId: str, tripId: str, overBudgetReason: str, queryTarget: str)\
@@ -1122,10 +1136,6 @@ workflow:
           \ None,\n        \"need_type\": nt,\n    }\n    return {\"result\": json.dumps(out,\
           \ ensure_ascii=False)}\n"
         code_language: python3
-        outputs:
-          result:
-            type: string
-            children: null
       position:
         x: 3004.0
         y: 227.0
@@ -1137,19 +1147,174 @@ workflow:
       selected: false
       sourcePosition: right
       targetPosition: left
-    edges:
-    - id: start_node-source-llm_understand-target
-      source: start_node
-      target: llm_understand
-      sourceHandle: source
-      targetHandle: target
+    - id: code_check_data
       type: custom
-      zIndex: 0
       data:
-        sourceType: start
-        targetType: llm
-        isInIteration: false
-        isInLoop: false
+        type: code
+        title: 代码-数据检查
+        desc: ''
+        selected: false
+        variables:
+        - variable: tool_data
+          label: tool_data
+          type: text-input
+          required: false
+          options: []
+          value_selector:
+          - start_node
+          - tool_data
+        outputs:
+          has_data:
+            type: boolean
+            children: null
+        code: "def main(tool_data: str) -> dict:\n    return {\"has_data\": bool((tool_data\
+          \ or \"\").strip())}\n"
+        code_language: python3
+      position:
+        x: 3308.0
+        y: 227.0
+      positionAbsolute:
+        x: 3308.0
+        y: 227.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: llm_final
+      type: custom
+      data:
+        type: llm
+        title: LLM-最终回复
+        desc: ''
+        selected: false
+        model:
+          provider: langgenius/deepseek/deepseek
+          name: deepseek-v4-flash
+          mode: chat
+          completion_params:
+            temperature: 0.2
+        prompt_template:
+        - role: system
+          text: '你是复星差旅 AI 管家。基于系统返回的数据（航班/酒店/差标/行程/订单/取消结果）生成最终回复。要求：reply 为给用户的完整回答文本（列表用数字编号，金额一律金额化表述、禁止星级）；action
+            用 show_standards/show_flights/show_hotels/show_itineraries/booking_done/cancelled
+            之一；cards 透传系统数据中的对应字段（standards/flights/hotels/itineraries/orders）；intent
+            保持当前意图；slots 透传相关槽位；confirm 为 null。只输出 JSON：{"reply":"...","intent":"...","state":"...","action":"...","slots":{},"cards":{},"confirm":null}，不要
+            markdown 代码块。
+
+
+            系统数据：{{#start_node.tool_data#}}
+
+
+            用户输入：{{#sys.query#}}'
+        vision:
+          enabled: false
+          configs:
+            variable_selector: []
+        memory:
+          enabled: true
+          window:
+            enabled: true
+            size: 12
+        context:
+          enabled: false
+          variable_selector: []
+        structured_output:
+          enabled: false
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+          exponential_backoff:
+            enabled: false
+            multiplier: 2
+            max_interval: 10000
+      position:
+        x: 3612.0
+        y: 227.0
+      positionAbsolute:
+        x: 3612.0
+        y: 227.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: code_final_data
+      type: custom
+      data:
+        type: code
+        title: 代码-最终输出
+        desc: ''
+        selected: false
+        variables:
+        - variable: raw
+          label: raw
+          type: text-input
+          required: true
+          options: []
+          value_selector:
+          - llm_final
+          - text
+        outputs:
+          result:
+            type: string
+            children: null
+        code: "import json, re\n\ndef strip_think(t):\n    t = re.sub(r\"<!--.*?-->\"\
+          , \"\", t or \"\", flags=re.DOTALL)\n    t = re.sub(r\"<think>.*?</think>\"\
+          , \"\", t, flags=re.DOTALL)\n    return t.strip()\n\ndef main(raw: str)\
+          \ -> dict:\n    text = (raw or \"\").strip()\n    text = strip_think(text)\n\
+          \    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n  \
+          \  if m:\n        try:\n            data = json.loads(m.group(0))\n    \
+          \    except Exception:\n            data = None\n    if not isinstance(data,\
+          \ dict):\n        data = {\"reply\": \"抱歉，我暂时无法处理这个请求。\", \"intent\": \"\
+          unknown\", \"state\": \"Idle\", \"action\": \"chat\", \"slots\": {}, \"\
+          cards\": {}, \"confirm\": None}\n    if not data.get(\"reply\"):\n     \
+          \   data[\"reply\"] = \"已为您查询到结果。\"\n    return {\"result\": json.dumps(data,\
+          \ ensure_ascii=False)}\n"
+        code_language: python3
+      position:
+        x: 3916.0
+        y: 227.0
+      positionAbsolute:
+        x: 3916.0
+        y: 227.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    - id: if_data
+      type: custom
+      data:
+        type: if-else
+        title: 分支-数据
+        desc: ''
+        selected: false
+        cases:
+        - id: 'true'
+          case_id: 'true'
+          conditions:
+          - id: cond_has
+            comparison_operator: is
+            value: 'true'
+            varType: string
+            variable_selector:
+            - code_check_data
+            - has_data
+          logical_operator: and
+      position:
+        x: 4220.0
+        y: 227.0
+      positionAbsolute:
+        x: 4220.0
+        y: 227.0
+      width: 244
+      height: 90
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+    edges:
     - id: llm_understand-source-code_parse-target
       source: llm_understand
       target: code_parse
@@ -1532,6 +1697,78 @@ workflow:
       data:
         sourceType: code
         targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: start_node-source-code_check_data-target
+      source: start_node
+      target: code_check_data
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_check_data-source-if_data-target
+      source: code_check_data
+      target: if_data
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: if-else
+        isInIteration: false
+        isInLoop: false
+    - id: if_data-true-llm_final-target
+      source: if_data
+      target: llm_final
+      sourceHandle: 'true'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: llm_final-source-code_final_data-target
+      source: llm_final
+      target: code_final_data
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: code_final_data-source-code_final_master-target
+      source: code_final_data
+      target: code_final_master
+      sourceHandle: source
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: if_data-false-llm_understand-target
+      source: if_data
+      target: llm_understand
+      sourceHandle: 'false'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: if-else
+        targetType: llm
         isInIteration: false
         isInLoop: false
     viewport:
