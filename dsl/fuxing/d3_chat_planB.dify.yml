@@ -151,37 +151,7 @@ workflow:
           value_selector:
           - llm_understand
           - text
-        code: 'import json, re
-
-def main(raw: str) -> dict:
-    text = (raw or "").strip()
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    m = re.search(r"\{.*\}", text, re.DOTALL)
-    data = None
-    if m:
-        try:
-            data = json.loads(m.group(0))
-        except Exception:
-            data = None
-    if not isinstance(data, dict):
-        data = {}
-    intent = str(data.get("intent", "unknown") or "unknown")
-    slots = data.get("slots", {}) or {}
-    if not isinstance(slots, dict):
-        slots = {}
-    def g(k):
-        v = slots.get(k, "")
-        return str(v).strip() if v else ""
-    return {
-        "intent": intent,
-        "date": g("date"), "origin": g("origin"), "destination": g("destination"),
-        "city": g("city"), "level": g("level"), "queryTarget": g("queryTarget"),
-        "tripId": g("tripId"), "flightNo": g("flightNo"), "hotelId": g("hotelId"),
-        "orderId": g("orderId"), "overBudgetReason": g("overBudgetReason"),
-        "reply": str(data.get("reply", "") or "").strip(),
-        "need_ask": bool(data.get("need_ask", False)),
-    }
-'
+        code: "import json, re\n\ndef main(raw: str) -> dict:\n    text = (raw or \"\").strip()\n    text = re.sub(r\"<think>.*?</think>\", \"\", text, flags=re.DOTALL)\n    m = re.search(r\"\\{.*\\}\", text, re.DOTALL)\n    data = None\n    if m:\n        try:\n            data = json.loads(m.group(0))\n        except Exception:\n            data = None\n    if not isinstance(data, dict):\n        data = {}\n    intent = str(data.get(\"intent\", \"unknown\") or \"unknown\")\n    slots = data.get(\"slots\", {}) or {}\n    if not isinstance(slots, dict):\n        slots = {}\n    def g(k):\n        v = slots.get(k, \"\")\n        return str(v).strip() if v else \"\"\n    return {\n        \"intent\": intent,\n        \"date\": g(\"date\"), \"origin\": g(\"origin\"), \"destination\": g(\"destination\"),\n        \"city\": g(\"city\"), \"level\": g(\"level\"), \"queryTarget\": g(\"queryTarget\"),\n        \"tripId\": g(\"tripId\"), \"flightNo\": g(\"flightNo\"), \"hotelId\": g(\"hotelId\"),\n        \"orderId\": g(\"orderId\"), \"overBudgetReason\": g(\"overBudgetReason\"),\n        \"reply\": str(data.get(\"reply\", \"\") or \"\").strip(),\n        \"need_ask\": bool(data.get(\"need_ask\", False)),\n    }"
         code_language: python3
         outputs:
           intent: {type: string, children: null}
@@ -233,26 +203,7 @@ def main(raw: str) -> dict:
           value_selector:
           - code_parse
           - orderId
-        code: 'def main(intent: str, orderId: str) -> dict:
-    intent = (intent or "unknown").strip()
-    if intent in ("flight_book", "combo_book"):
-        route = "flight"
-    elif intent == "hotel_book":
-        route = "hotel"
-    elif intent == "trip_query":
-        route = "trip"
-    elif intent == "cancel_adjust":
-        route = "cancel" if (orderId or "").strip() else "trip"
-    elif intent == "policy_query":
-        route = "policy"
-    elif intent in ("booking_confirm", "confirm_pay"):
-        route = "book"
-    elif intent == "personal_booking":
-        route = "hotel"
-    else:
-        route = "chat"
-    return {"route": route}
-'
+        code: "def main(intent: str, orderId: str) -> dict:\n    intent = (intent or \"unknown\").strip()\n    if intent in (\"flight_book\", \"combo_book\"):\n        route = \"flight\"\n    elif intent == \"hotel_book\":\n        route = \"hotel\"\n    elif intent == \"trip_query\":\n        route = \"trip\"\n    elif intent == \"cancel_adjust\":\n        route = \"cancel\" if (orderId or \"\").strip() else \"trip\"\n    elif intent == \"policy_query\":\n        route = \"policy\"\n    elif intent in (\"booking_confirm\", \"confirm_pay\"):\n        route = \"book\"\n    elif intent == \"personal_booking\":\n        route = \"hotel\"\n    else:\n        route = \"chat\"\n    return {\"route\": route}"
         code_language: python3
         outputs:
           route: {type: string, children: null}
@@ -282,7 +233,7 @@ def main(raw: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: policy
           logical_operator: and
       position:
@@ -320,14 +271,7 @@ def main(raw: str) -> dict:
           value_selector:
           - sys
           - query
-        code: 'import json, re
-
-def main(level: str, query: str) -> dict:
-    m = re.search(r"(M|P|I)\d+", (level or "") + " " + (query or ""))
-    if m:
-        return {"level": m.group(0), "route2": "standard"}
-    return {"level": "", "route2": "rag"}
-'
+        code: "import json, re\n\ndef main(level: str, query: str) -> dict:\n    m = re.search(r\"(M|P|I)\\d+\", (level or \"\") + \" \" + (query or \"\"))\n    if m:\n        return {\"level\": m.group(0), \"route2\": \"standard\"}\n    return {\"level\": \"\", \"route2\": \"rag\"}"
         code_language: python3
         outputs:
           level:
@@ -362,7 +306,7 @@ def main(level: str, query: str) -> dict:
             variable_selector:
             - code_policy_route
             - route2
-            comparison_operator: is
+            comparison_operator: eq
             value: standard
           logical_operator: and
       position:
@@ -588,28 +532,7 @@ def main(level: str, query: str) -> dict:
           value_selector:
           - code_policy_route
           - level
-        code: 'import json
-
-def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dict:
-    reply = (reply_std or "").strip() or (reply_rag or "").strip() or "已为您查询差旅标准。"
-    cards = {}
-    try:
-        data = json.loads(standards_body or "{}")
-        if isinstance(data, dict) and data.get("standards"):
-            cards["standards"] = data["standards"]
-    except Exception:
-        pass
-    out = {
-        "reply": reply,
-        "intent": "policy_query",
-        "state": "PolicyQA",
-        "action": "show_standards" if cards else "policy_answer",
-        "slots": {"level": level or ""},
-        "cards": cards,
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json\n\ndef main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dict:\n    reply = (reply_std or \"\").strip() or (reply_rag or \"\").strip() or \"已为您查询差旅标准。\"\n    cards = {}\n    try:\n        data = json.loads(standards_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"standards\"):\n            cards[\"standards\"] = data[\"standards\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": reply,\n        \"intent\": \"policy_query\",\n        \"state\": \"PolicyQA\",\n        \"action\": \"show_standards\" if cards else \"policy_answer\",\n        \"slots\": {\"level\": level or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -641,7 +564,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: flight
           logical_operator: and
       position:
@@ -695,10 +618,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
           value_selector:
           - code_parse
           - need_ask
-        code: 'def main(date: str, origin: str, destination: str, need_ask: str) -> dict:
-    need_data = bool(date and origin and destination)
-    return {"need_data": need_data, "ask": (need_ask or "").lower() == "true" and not need_data}
-'
+        code: "def main(date: str, origin: str, destination: str, need_ask: str) -> dict:\n    need_data = bool(date and origin and destination)\n    return {\"need_data\": need_data, \"ask\": (need_ask or \"\").lower() == \"true\" and not need_data}"
         code_language: python3
         outputs:
           need_data:
@@ -733,7 +653,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
             variable_selector:
             - code_flight_check
             - ask
-            comparison_operator: is
+            comparison_operator: eq
             value: 'true'
           logical_operator: and
       position:
@@ -918,27 +838,7 @@ def main(reply_std: str, reply_rag: str, standards_body: str, level: str) -> dic
           value_selector:
           - code_parse
           - destination
-        code: 'import json
-
-def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
-    cards = {}
-    try:
-        data = json.loads(flights_body or "{}")
-        if isinstance(data, dict) and data.get("flights"):
-            cards["flights"] = data["flights"]
-    except Exception:
-        pass
-    out = {
-        "reply": (reply or "").strip() or "已为您查询航班。",
-        "intent": "flight_book",
-        "state": "FlightListing",
-        "action": "show_flights" if cards else "no_flights",
-        "slots": {"origin": origin or "", "destination": destination or ""},
-        "cards": cards,
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json\n\ndef main(reply: str, flights_body: str, origin: str, destination: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(flights_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"flights\"):\n            cards[\"flights\"] = data[\"flights\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询航班。\",\n        \"intent\": \"flight_book\",\n        \"state\": \"FlightListing\",\n        \"action\": \"show_flights\" if cards else \"no_flights\",\n        \"slots\": {\"origin\": origin or \"\", \"destination\": destination or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -970,7 +870,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: hotel
           logical_operator: and
       position:
@@ -1024,10 +924,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
           value_selector:
           - start_node
           - level
-        code: 'def main(city: str, destination: str, need_ask: str, level: str) -> dict:
-    c = (city or "").strip() or (destination or "").strip()
-    return {"city": c, "level": (level or "").strip(), "ask": bool(c) is False and (need_ask or "").lower() == "true"}
-'
+        code: "def main(city: str, destination: str, need_ask: str, level: str) -> dict:\n    c = (city or \"\").strip() or (destination or \"\").strip()\n    return {\"city\": c, \"level\": (level or \"\").strip(), \"ask\": bool(c) is False and (need_ask or \"\").lower() == \"true\"}"
         code_language: python3
         outputs:
           city:
@@ -1065,7 +962,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
             variable_selector:
             - code_hotel_check
             - ask
-            comparison_operator: is
+            comparison_operator: eq
             value: 'true'
           logical_operator: and
       position:
@@ -1201,27 +1098,7 @@ def main(reply: str, flights_body: str, origin: str, destination: str) -> dict:
           value_selector:
           - code_hotel_check
           - city
-        code: 'import json
-
-def main(reply: str, hotels_body: str, city: str) -> dict:
-    cards = {}
-    try:
-        data = json.loads(hotels_body or "{}")
-        if isinstance(data, dict) and data.get("hotels"):
-            cards["hotels"] = data["hotels"]
-    except Exception:
-        pass
-    out = {
-        "reply": (reply or "").strip() or "已为您查询酒店。",
-        "intent": "hotel_book",
-        "state": "HotelListing",
-        "action": "show_hotels" if cards else "no_hotels",
-        "slots": {"city": city or ""},
-        "cards": cards,
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json\n\ndef main(reply: str, hotels_body: str, city: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(hotels_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"hotels\"):\n            cards[\"hotels\"] = data[\"hotels\"]\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询酒店。\",\n        \"intent\": \"hotel_book\",\n        \"state\": \"HotelListing\",\n        \"action\": \"show_hotels\" if cards else \"no_hotels\",\n        \"slots\": {\"city\": city or \"\"},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -1253,7 +1130,7 @@ def main(reply: str, hotels_body: str, city: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: trip
           logical_operator: and
       position:
@@ -1381,27 +1258,7 @@ def main(reply: str, hotels_body: str, city: str) -> dict:
           value_selector:
           - http_itineraries
           - body
-        code: 'import json
-
-def main(reply: str, itin_body: str) -> dict:
-    cards = {}
-    try:
-        data = json.loads(itin_body or "{}")
-        if isinstance(data, dict) and (data.get("upcoming") or data.get("history")):
-            cards["itineraries"] = data
-    except Exception:
-        pass
-    out = {
-        "reply": (reply or "").strip() or "已为您查询行程。",
-        "intent": "trip_query",
-        "state": "TripQuerying",
-        "action": "show_itineraries" if cards else "no_itineraries",
-        "slots": {},
-        "cards": cards,
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json\n\ndef main(reply: str, itin_body: str) -> dict:\n    cards = {}\n    try:\n        data = json.loads(itin_body or \"{}\")\n        if isinstance(data, dict) and (data.get(\"upcoming\") or data.get(\"history\")):\n            cards[\"itineraries\"] = data\n    except Exception:\n        pass\n    out = {\n        \"reply\": (reply or \"\").strip() or \"已为您查询行程。\",\n        \"intent\": \"trip_query\",\n        \"state\": \"TripQuerying\",\n        \"action\": \"show_itineraries\" if cards else \"no_itineraries\",\n        \"slots\": {},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -1433,7 +1290,7 @@ def main(reply: str, itin_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: book
           logical_operator: and
       position:
@@ -1503,17 +1360,7 @@ def main(reply: str, itin_body: str) -> dict:
           value_selector:
           - code_parse
           - overBudgetReason
-        code: 'def main(flightNo: str, hotelId: str, tripId: str, checkIn: str, checkOut: str, overBudgetReason: str) -> dict:
-    f = (flightNo or "").strip()
-    h = (hotelId or "").strip()
-    if f and h:
-        t = "combo"
-    elif f:
-        t = "flight"
-    else:
-        t = "hotel"
-    return {"type": t, "flightId": f, "hotelId": h, "tripId": (tripId or "").strip(), "checkIn": (checkIn or "").strip(), "checkOut": (checkOut or "").strip(), "overBudgetReason": (overBudgetReason or "").strip()}
-'
+        code: "def main(flightNo: str, hotelId: str, tripId: str, checkIn: str, checkOut: str, overBudgetReason: str) -> dict:\n    f = (flightNo or \"\").strip()\n    h = (hotelId or \"\").strip()\n    if f and h:\n        t = \"combo\"\n    elif f:\n        t = \"flight\"\n    else:\n        t = \"hotel\"\n    return {\"type\": t, \"flightId\": f, \"hotelId\": h, \"tripId\": (tripId or \"\").strip(), \"checkIn\": (checkIn or \"\").strip(), \"checkOut\": (checkOut or \"\").strip(), \"overBudgetReason\": (overBudgetReason or \"\").strip()}"
         code_language: python3
         outputs:
           type:
@@ -1605,31 +1452,7 @@ def main(reply: str, itin_body: str) -> dict:
           value_selector:
           - http_create_order
           - body
-        code: 'import json
-
-def main(order_body: str) -> dict:
-    reply = "正在为您下单…"
-    cards = {}
-    try:
-        data = json.loads(order_body or "{}")
-        if isinstance(data, dict) and data.get("order"):
-            o = data["order"]
-            cards["orders"] = [o]
-            oid = o.get("orderId") or o.get("id") or ""
-            reply = "已为您确认预订（订单号 " + str(oid) + "），企业支付 ¥" + str(o.get("companyPay", 0)) + "，个人支付 ¥" + str(o.get("personalPay", 0)) + "，邮件与日历回执已生成（模拟）。"
-    except Exception:
-        pass
-    out = {
-        "reply": reply,
-        "intent": "booking_confirm",
-        "state": "BookingConfirming",
-        "action": "booking_done",
-        "slots": {},
-        "cards": cards,
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json\n\ndef main(order_body: str) -> dict:\n    reply = \"正在为您下单…\"\n    cards = {}\n    try:\n        data = json.loads(order_body or \"{}\")\n        if isinstance(data, dict) and data.get(\"order\"):\n            o = data[\"order\"]\n            cards[\"orders\"] = [o]\n            oid = o.get(\"orderId\") or o.get(\"id\") or \"\"\n            reply = \"已为您确认预订（订单号 \" + str(oid) + \"），企业支付 ¥\" + str(o.get(\"companyPay\", 0)) + \"，个人支付 ¥\" + str(o.get(\"personalPay\", 0)) + \"，邮件与日历回执已生成（模拟）。\"\n    except Exception:\n        pass\n    out = {\n        \"reply\": reply,\n        \"intent\": \"booking_confirm\",\n        \"state\": \"BookingConfirming\",\n        \"action\": \"booking_done\",\n        \"slots\": {},\n        \"cards\": cards,\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -1661,7 +1484,7 @@ def main(order_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: cancel
           logical_operator: and
       position:
@@ -1740,18 +1563,7 @@ def main(order_body: str) -> dict:
           value_selector:
           - code_parse
           - orderId
-        code: 'def main(cancel_body: str, orderId: str) -> dict:
-    out = {
-        "reply": "已取消订单 " + (orderId or "") + "，关联出差单已重新激活，可再次用于预订。",
-        "intent": "cancel_adjust",
-        "state": "Idle",
-        "action": "cancelled",
-        "slots": {},
-        "cards": {},
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "def main(cancel_body: str, orderId: str) -> dict:\n    out = {\n        \"reply\": \"已取消订单 \" + (orderId or \"\") + \"，关联出差单已重新激活，可再次用于预订。\",\n        \"intent\": \"cancel_adjust\",\n        \"state\": \"Idle\",\n        \"action\": \"cancelled\",\n        \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -1783,7 +1595,7 @@ def main(order_body: str) -> dict:
             variable_selector:
             - code_route
             - route
-            comparison_operator: is
+            comparison_operator: eq
             value: chat
           logical_operator: and
       position:
@@ -1821,23 +1633,7 @@ def main(order_body: str) -> dict:
           value_selector:
           - llm_understand
           - text
-        code: 'import json, re
-
-def main(reply: str, ask_q: str) -> dict:
-    text = (reply or "").strip()
-    if not text:
-        text = "请问还有什么可以帮您？"
-    out = {
-        "reply": text,
-        "intent": "chitchat",
-        "state": "Idle",
-        "action": "chat",
-        "slots": {},
-        "cards": {},
-        "confirm": None,
-    }
-    return {"result": json.dumps(out, ensure_ascii=False)}
-'
+        code: "import json, re\n\ndef main(reply: str, ask_q: str) -> dict:\n    text = (reply or \"\").strip()\n    if not text:\n        text = \"请问还有什么可以帮您？\"\n    out = {\n        \"reply\": text,\n        \"intent\": \"chitchat\",\n        \"state\": \"Idle\",\n        \"action\": \"chat\",\n        \"slots\": {},\n        \"cards\": {},\n        \"confirm\": None,\n    }\n    return {\"result\": json.dumps(out, ensure_ascii=False)}"
         code_language: python3
         outputs:
           result:
@@ -1918,12 +1714,7 @@ def main(reply: str, ask_q: str) -> dict:
           value_selector:
           - code_final_chat
           - result
-        code: 'def main(policy_result: str, flights_result: str, hotels_result: str, trip_result: str, order_result: str, cancel_result: str, chat_result: str) -> dict:
-    for v in (policy_result, flights_result, hotels_result, trip_result, order_result, cancel_result, chat_result):
-        if v and v.strip():
-            return {"result": v.strip()}
-    return {"result": "{\"reply\":\"抱歉，我暂时无法处理这个请求。\",\"intent\":\"unknown\",\"state\":\"Idle\",\"action\":\"chat\",\"slots\":{},\"cards\":{},\"confirm\":null}"}
-'
+        code: "def main(policy_result: str, flights_result: str, hotels_result: str, trip_result: str, order_result: str, cancel_result: str, chat_result: str) -> dict:\n    for v in (policy_result, flights_result, hotels_result, trip_result, order_result, cancel_result, chat_result):\n        if v and v.strip():\n            return {\"result\": v.strip()}\n    return {\"result\": \"{\\\"reply\\\":\\\"抱歉，我暂时无法处理这个请求。\\\",\\\"intent\\\":\\\"unknown\\\",\\\"state\\\":\\\"Idle\\\",\\\"action\\\":\\\"chat\\\",\\\"slots\\\":{},\\\"cards\\\":{},\\\"confirm\\\":null}\"}"
         code_language: python3
         outputs:
           result:
