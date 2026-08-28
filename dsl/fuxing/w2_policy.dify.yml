@@ -84,27 +84,25 @@ workflow:
             temperature: 0.1
         prompt_template:
         - role: system
-          text: '你是一个差旅政策问答助手。基于提供的政策文档检索片段，回答用户的差旅政策问题。
+          text: '你是差旅政策问答助手。基于检索片段回答，输出 JSON。
 
 
             要求：
 
-            1. 只依据检索到的政策文档片段回答，不得编造或使用外部知识。
+            1. 只依据检索片段，不编造；差标一律金额化表述（人民币元），禁止星级。
 
-            2. 答案中涉及差旅标准一律以金额表述（人民币元），禁止出现"星级""五星"等酒店等级描述，住宿标准一律按金额说明。
+            2. 回答必须简洁：只答最直接相关的一条规定，≤80字，不要罗列多条子条款。
 
-            3. 回答必须输出 JSON 格式：{"answer":"回答内容","citations":[{"document":"复星集团全球差旅费报销管理规定(2026)","page":12}]}
+            3. 输出格式：{"answer":"回答内容","citations":[{"document":"复星集团全球差旅费报销管理规定(2026)","page":0}]}
 
-            4. citations 引用检索到的文档片段（document 为文档名称，page 为片段序号/页码，无法确定时用 0）；同一 document+page
-            只输出一条，最多输出 3 条，禁止重复。
+            4. citations 最多 2 条，document 固定为规定名称，page 无法确定用 0。
 
-            5. 检索片段与问题无关或为空时，answer 返回兜底话术："抱歉，我暂时无法回答这个问题，请咨询差旅管理团队或查阅《复星集团全球差旅费报销管理规定(2026)》。"，citations
-            返回 []。
+            5. 检索片段无关或为空时：{"answer":"抱歉，暂时无法回答，请咨询差旅管理团队或查阅相关规定。","citations":[]}
 
-            6. 只输出 JSON，不要 markdown 代码块，不要任何解释文字。
+            6. 只输出 JSON，不要 markdown 代码块。
 
 
-            政策文档片段：
+            检索片段：
 
             {{#knowledge_retrieval.result#}}
 
@@ -179,7 +177,9 @@ workflow:
           \ page)\n        if key in seen:\n            continue\n        seen.add(key)\n\
           \        cleaned_cites.append({\"document\": doc, \"page\": page})\n   \
           \     if len(cleaned_cites) >= 3:\n            break\n    if not ans:\n\
-          \        ans = FALLBACK\n    return {\"answer\": ans, \"citations_json\"\
+          \        ans = FALLBACK\n    # 确定性截断：answer 超 80 字截断加省略号（提速 + 一致，不依赖 LLM\
+          \ 自觉）\n    runes = list(ans)\n    if len(runes) > 80:\n        ans = \"\"\
+          .join(runes[:80]).rstrip() + \"…\"\n    return {\"answer\": ans, \"citations_json\"\
           : json.dumps(cleaned_cites, ensure_ascii=False)}\n"
         code_language: python3
       position:
